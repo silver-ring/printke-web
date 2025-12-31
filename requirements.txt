@@ -1,0 +1,36 @@
+# PrintKe - Flask Application Dependencies
+# Production-ready with security and performance packages
+
+# Core Flask
+Flask>=3.0.0
+Flask-SQLAlchemy>=3.1.1
+Flask-Login>=0.6.3
+Flask-CORS>=4.0.0
+Flask-Migrate>=4.0.5
+Flask-Limiter>=3.5.0
+
+# Database
+SQLAlchemy>=2.0.23
+
+# Security
+Werkzeug>=3.0.1
+python-dotenv>=1.0.0
+
+# HTTP Requests (for M-Pesa API)
+requests>=2.31.0
+
+# Image Processing
+Pillow>=10.1.0
+
+# PDF Generation
+reportlab>=4.0.7
+
+# Production Server
+gunicorn>=21.2.0
+
+# For rate limiting with Redis (production)
+# redis>=5.0.1  # Uncomment for Redis-backed rate limiting
+
+# Testing (optional)
+# pytest>=7.4.3
+# pytest-flask>=1.3.0

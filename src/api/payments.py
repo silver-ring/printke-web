@@ -1,5 +1,6 @@
 """
 Payment API Routes - M-Pesa Integration
+Production-ready with input validation and error handling
 """
 from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
@@ -7,6 +8,7 @@ from datetime import datetime
 from src.models import db, Order, Payment, PrintJob
 from src.services.mpesa import MpesaService
 from src.services.card_processor import PrintService
+from src.utils.validators import ValidationError, validate_phone, validate_order_number, sanitize_string
 
 
 def auto_print_order(order):
@@ -83,11 +85,16 @@ def initiate_mpesa():
     }
     """
     data = request.get_json()
-    order_number = data.get('order_number')
-    phone = data.get('phone')
 
-    if not order_number or not phone:
-        return jsonify({'error': 'Order number and phone are required'}), 400
+    if not data:
+        return jsonify({'error': 'JSON payload required'}), 400
+
+    # Validate inputs
+    try:
+        order_number = validate_order_number(data.get('order_number'))
+        phone = validate_phone(data.get('phone'))
+    except ValidationError as e:
+        return jsonify({'error': e.message, 'field': e.field}), 400
 
     # Find order
     order = Order.query.filter_by(order_number=order_number).first()
@@ -265,6 +272,12 @@ def check_payment_status(checkout_request_id):
 @payments_bp.route('/order/<order_number>/status', methods=['GET'])
 def check_order_payment(order_number):
     """Check payment status for an order"""
+    # Validate order number format
+    try:
+        order_number = validate_order_number(order_number)
+    except ValidationError as e:
+        return jsonify({'error': e.message}), 400
+
     order = Order.query.filter_by(order_number=order_number).first()
 
     if not order:
@@ -274,7 +287,7 @@ def check_order_payment(order_number):
         'order_number': order.order_number,
         'payment_status': order.payment_status,
         'order_status': order.status,
-        'total': order.total,
+        'total': float(order.total),
         'paid_at': order.paid_at.isoformat() if order.paid_at else None,
         'receipt': order.payment_reference
     })

@@ -4,12 +4,19 @@ Main Application Entry Point
 """
 import os
 import logging
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
 from flask_login import LoginManager
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_migrate import Migrate
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from config.settings import config
 from src.models import db, User
+
+# Initialize migrate outside of create_app for CLI access
+migrate = Migrate()
 
 
 def create_app(config_name=None):
@@ -24,6 +31,9 @@ def create_app(config_name=None):
     # Load configuration
     app.config.from_object(config[config_name])
 
+    # Handle proxy headers for HTTPS behind reverse proxy
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
     # Setup logging
     logging.basicConfig(
         level=logging.DEBUG if app.debug else logging.INFO,
@@ -33,7 +43,55 @@ def create_app(config_name=None):
 
     # Initialize extensions
     db.init_app(app)
-    CORS(app)
+    migrate.init_app(app, db)
+
+    # CORS with security
+    cors_origins = os.getenv('CORS_ORIGINS', '*').split(',')
+    CORS(app, origins=cors_origins, supports_credentials=True)
+
+    # Rate limiting
+    limiter = Limiter(
+        key_func=get_remote_address,
+        app=app,
+        storage_uri=os.getenv('RATELIMIT_STORAGE_URL', 'memory://'),
+        default_limits=['200 per day', '50 per hour']
+    )
+
+    # Apply stricter limits to sensitive endpoints
+    @app.before_request
+    def apply_rate_limits():
+        """Apply endpoint-specific rate limits"""
+        pass  # Limiter decorators applied directly to routes
+
+    # Security headers
+    @app.after_request
+    def add_security_headers(response):
+        """Add security headers to all responses"""
+        # Prevent clickjacking
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        # Prevent MIME type sniffing
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        # XSS Protection
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        # Referrer Policy
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        # Content Security Policy (basic - customize for production)
+        if not app.debug:
+            response.headers['Content-Security-Policy'] = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline' https://unpkg.com; "
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; "
+                "font-src 'self' https://fonts.gstatic.com; "
+                "img-src 'self' data: https://*.tile.openstreetmap.org; "
+                "connect-src 'self'"
+            )
+        # HTTPS enforcement in production
+        if not app.debug:
+            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        return response
+
+    # Store limiter for use in blueprints
+    app.limiter = limiter
 
     # Setup Flask-Login
     login_manager = LoginManager()
@@ -58,6 +116,11 @@ def create_app(config_name=None):
     app.register_blueprint(orders_bp)
     app.register_blueprint(payments_bp)
     app.register_blueprint(admin_bp)
+
+    # Apply rate limits to sensitive endpoints
+    limiter.limit("10 per minute")(orders_bp)  # Order creation
+    limiter.limit("5 per minute")(payments_bp)  # Payment initiation
+    limiter.limit("5 per minute")(admin_bp)  # Admin login attempts
 
     # Main routes
     @app.route('/')
@@ -115,17 +178,49 @@ def create_app(config_name=None):
         return jsonify({'status': 'healthy', 'mock_mode': app.config.get('MOCK_PRINTING', True)})
 
     # Error handlers
+    @app.errorhandler(400)
+    def bad_request(e):
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'Bad request', 'message': str(e.description)}), 400
+        return render_template('errors/400.html'), 400
+
+    @app.errorhandler(401)
+    def unauthorized(e):
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'Unauthorized'}), 401
+        return render_template('errors/401.html'), 401
+
+    @app.errorhandler(403)
+    def forbidden(e):
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'Forbidden'}), 403
+        return render_template('errors/403.html'), 403
+
     @app.errorhandler(404)
     def not_found(e):
-        if 'api' in str(e):
+        if request.path.startswith('/api/'):
             return jsonify({'error': 'Not found'}), 404
         return render_template('errors/404.html'), 404
 
+    @app.errorhandler(429)
+    def ratelimit_handler(e):
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'Rate limit exceeded. Please try again later.'}), 429
+        return render_template('errors/429.html'), 429
+
     @app.errorhandler(500)
     def server_error(e):
-        logger.error(f"Server error: {e}")
-        if 'api' in str(e):
+        logger.error(f"Server error: {e}", exc_info=True)
+        if request.path.startswith('/api/'):
             return jsonify({'error': 'Internal server error'}), 500
+        return render_template('errors/500.html'), 500
+
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        """Handle all unhandled exceptions"""
+        logger.error(f"Unhandled exception: {e}", exc_info=True)
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'An unexpected error occurred'}), 500
         return render_template('errors/500.html'), 500
 
     # Create database tables

@@ -1,16 +1,25 @@
 """
 Order Management API Routes
+Production-ready with input validation and error handling
 """
 from flask import Blueprint, request, jsonify, current_app, send_file
 from werkzeug.utils import secure_filename
 import os
-import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from src.models import db, Order, OrderItem, User, Product
 from src.services.card_processor import CardProcessor, PrintService
+from src.utils.validators import (
+    ValidationError, validate_phone, validate_email, validate_name,
+    validate_quantity, validate_address, validate_delivery_city,
+    validate_order_number, validate_file_upload, sanitize_string
+)
 
 orders_bp = Blueprint('orders', __name__, url_prefix='/api/orders')
+
+
+# Valid delivery cities
+VALID_CITIES = ['nairobi_cbd', 'nairobi', 'thika', 'nakuru', 'mombasa', 'kisumu', 'eldoret', 'other']
 
 
 def allowed_file(filename):
@@ -22,9 +31,10 @@ def allowed_file(filename):
 def get_price_per_card(quantity):
     """Calculate price per card based on quantity tier"""
     tiers = current_app.config.get('PRICING_TIERS', {
-        'single': {'min': 1, 'max': 50, 'price': 300},
-        'small': {'min': 51, 'max': 200, 'price': 200},
-        'medium': {'min': 201, 'max': 500, 'price': 150},
+        'single': {'min': 1, 'max': 10, 'price': 400},
+        'small': {'min': 11, 'max': 50, 'price': 300},
+        'medium': {'min': 51, 'max': 200, 'price': 200},
+        'standard': {'min': 201, 'max': 500, 'price': 150},
         'large': {'min': 501, 'max': 1000, 'price': 120},
         'bulk': {'min': 1001, 'max': 999999, 'price': 100},
     })
@@ -32,7 +42,7 @@ def get_price_per_card(quantity):
     for tier in tiers.values():
         if tier['min'] <= quantity <= tier['max']:
             return tier['price']
-    return 300  # Default price
+    return 400  # Default price
 
 
 @orders_bp.route('/create', methods=['POST'])
@@ -41,48 +51,60 @@ def create_order():
     Create a new order with card images
 
     Expects multipart/form-data with:
-    - front: Front image file
-    - back: Back image file (optional for single-sided)
-    - quantity: Number of cards
-    - name: Customer name
-    - email: Customer email
-    - phone: Customer phone
-    - delivery_method: 'delivery' or 'pickup'
-    - delivery_address: Address for delivery
-    - delivery_city: City for delivery fee calculation
+    - front: Front image file (required)
+    - back: Back image file (optional)
+    - quantity: Number of cards (1-10000)
+    - name: Customer name (required)
+    - email: Customer email (optional)
+    - phone: Customer phone (required)
+    - delivery_address: Full delivery address (required)
+    - delivery_city: City for delivery fee calculation (required)
     """
     try:
         # Validate files
         if 'front' not in request.files:
-            return jsonify({'error': 'Front image is required'}), 400
+            return jsonify({'error': 'Front image is required', 'field': 'front'}), 400
 
         front_file = request.files['front']
         back_file = request.files.get('back')
 
         if front_file.filename == '':
-            return jsonify({'error': 'No front image selected'}), 400
+            return jsonify({'error': 'No front image selected', 'field': 'front'}), 400
 
-        if not allowed_file(front_file.filename):
-            return jsonify({'error': 'Invalid file type. Use PNG, JPG, or JPEG'}), 400
+        # Validate file types
+        allowed_ext = current_app.config.get('ALLOWED_EXTENSIONS', {'png', 'jpg', 'jpeg', 'gif', 'webp'})
+        try:
+            validate_file_upload(front_file, allowed_ext, max_size_mb=16)
+        except ValidationError as e:
+            return jsonify({'error': e.message, 'field': 'front'}), 400
 
-        if back_file and back_file.filename and not allowed_file(back_file.filename):
-            return jsonify({'error': 'Invalid back image file type'}), 400
+        if back_file and back_file.filename:
+            try:
+                validate_file_upload(back_file, allowed_ext, max_size_mb=16)
+            except ValidationError as e:
+                return jsonify({'error': e.message, 'field': 'back'}), 400
 
-        # Get form data
-        quantity = int(request.form.get('quantity', 1))
-        name = request.form.get('name', '')
-        email = request.form.get('email', '')
-        phone = request.form.get('phone', '')
-        delivery_method = request.form.get('delivery_method', 'delivery')
-        delivery_address = request.form.get('delivery_address', '')
-        delivery_city = request.form.get('delivery_city', 'nairobi')
+        # Validate form data
+        try:
+            quantity = validate_quantity(request.form.get('quantity', 1), min_qty=1, max_qty=10000)
+            name = validate_name(request.form.get('name'), required=True)
+            email = validate_email(request.form.get('email'))
+            phone = validate_phone(request.form.get('phone'))
+            delivery_address = validate_address(request.form.get('delivery_address'), required=True)
+            delivery_city = validate_delivery_city(request.form.get('delivery_city', 'nairobi'), VALID_CITIES)
+        except ValidationError as e:
+            return jsonify({'error': e.message, 'field': e.field}), 400
+
+        # Sanitize inputs
+        name = sanitize_string(name, max_length=100)
+        delivery_address = sanitize_string(delivery_address, max_length=500)
 
         # Generate order number
         order_number = Order.generate_order_number()
         order_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], order_number)
         os.makedirs(order_folder, exist_ok=True)
 
-        # Save original files
+        # Save original files with secure filenames
         front_orig = os.path.join(order_folder, 'front_original.png')
         front_file.save(front_orig)
 
@@ -115,9 +137,7 @@ def create_order():
         subtotal = unit_price * quantity
 
         delivery_fees = current_app.config.get('DELIVERY_FEES', {})
-        delivery_fee = delivery_fees.get(delivery_city.lower(), delivery_fees.get('other', 800))
-        if delivery_method == 'pickup':
-            delivery_fee = 0
+        delivery_fee = delivery_fees.get(delivery_city.lower(), delivery_fees.get('other', 1000))
 
         total = subtotal + delivery_fee
 
@@ -131,7 +151,7 @@ def create_order():
             subtotal=subtotal,
             delivery_fee=delivery_fee,
             total=total,
-            delivery_method=delivery_method,
+            delivery_method='delivery',
             delivery_address=delivery_address,
             delivery_city=delivery_city
         )
@@ -153,6 +173,8 @@ def create_order():
         db.session.add(order_item)
         db.session.commit()
 
+        current_app.logger.info(f"Order created: {order_number} - {quantity} cards - KES {total}")
+
         return jsonify({
             'success': True,
             'order_number': order_number,
@@ -162,21 +184,22 @@ def create_order():
             'delivery_fee': delivery_fee,
             'total': total,
             'preview_url': f'/api/orders/{order_number}/preview',
+            'payment_url': f'/payment/{order_number}',
             'message': 'Order created successfully'
         })
 
+    except ValidationError as e:
+        return jsonify({'error': e.message, 'field': e.field}), 400
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Order creation error: {e}")
-        return jsonify({'error': str(e)}), 500
+        current_app.logger.error(f"Order creation error: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to create order. Please try again.'}), 500
 
 
 @orders_bp.route('/<order_number>', methods=['GET'])
 def get_order(order_number):
-    """Get order details"""
-    from datetime import timedelta
-
-    # Handle DEMO order for testing tracking
+    """Get order details by order number"""
+    # Handle DEMO order for testing
     if order_number == 'DEMO':
         shipped_time = datetime.utcnow() - timedelta(minutes=10)
         return jsonify({
@@ -198,6 +221,12 @@ def get_order(order_number):
             'delivered_at': None,
             'items': [{'quantity': 5, 'unit_price': 400, 'total_price': 2000, 'status': 'shipped'}]
         })
+
+    # Validate order number format
+    try:
+        validate_order_number(order_number)
+    except ValidationError:
+        return jsonify({'error': 'Invalid order number'}), 400
 
     order = Order.query.filter_by(order_number=order_number).first()
     if not order:
@@ -245,6 +274,7 @@ def preview_order(order_number):
         return jsonify({'error': 'No PDF available'}), 404
 
     if not os.path.exists(item.pdf_file):
+        current_app.logger.error(f"PDF file missing for order {order_number}: {item.pdf_file}")
         return jsonify({'error': 'PDF file not found'}), 404
 
     return send_file(item.pdf_file, mimetype='application/pdf')
@@ -261,6 +291,9 @@ def download_order(order_number):
     if not item or not item.pdf_file:
         return jsonify({'error': 'No PDF available'}), 404
 
+    if not os.path.exists(item.pdf_file):
+        return jsonify({'error': 'PDF file not found'}), 404
+
     return send_file(
         item.pdf_file,
         mimetype='application/pdf',
@@ -272,6 +305,9 @@ def download_order(order_number):
 @orders_bp.route('/<order_number>/card-image/<side>', methods=['GET'])
 def get_card_image(order_number, side):
     """Get processed card image (front or back)"""
+    if side not in ['front', 'back']:
+        return jsonify({'error': 'Invalid side. Use front or back'}), 400
+
     order = Order.query.filter_by(order_number=order_number).first()
     if not order:
         return jsonify({'error': 'Order not found'}), 404
@@ -281,16 +317,18 @@ def get_card_image(order_number, side):
         return jsonify({'error': 'Order item not found'}), 404
 
     if side == 'front' and item.front_image_processed:
-        return send_file(item.front_image_processed, mimetype='image/png')
+        if os.path.exists(item.front_image_processed):
+            return send_file(item.front_image_processed, mimetype='image/png')
     elif side == 'back' and item.back_image_processed:
-        return send_file(item.back_image_processed, mimetype='image/png')
-    else:
-        return jsonify({'error': 'Image not found'}), 404
+        if os.path.exists(item.back_image_processed):
+            return send_file(item.back_image_processed, mimetype='image/png')
+
+    return jsonify({'error': 'Image not found'}), 404
 
 
 @orders_bp.route('/<order_number>/print', methods=['POST'])
 def print_order(order_number):
-    """Send order to printer"""
+    """Send order to printer (internal use)"""
     order = Order.query.filter_by(order_number=order_number).first()
     if not order:
         return jsonify({'error': 'Order not found'}), 404
@@ -301,6 +339,9 @@ def print_order(order_number):
     item = order.items.first()
     if not item or not item.pdf_file:
         return jsonify({'error': 'No PDF available for printing'}), 404
+
+    if not os.path.exists(item.pdf_file):
+        return jsonify({'error': 'PDF file not found'}), 404
 
     printer = PrintService(
         printer_name=current_app.config.get('PRINTER_NAME', 'LXM-Card-Printer'),
@@ -313,37 +354,43 @@ def print_order(order_number):
         order.status = 'printing'
         item.status = 'printing'
         db.session.commit()
+        current_app.logger.info(f"Print job started for order {order_number}")
 
     return jsonify(result)
 
 
 @orders_bp.route('/pricing', methods=['GET'])
 def get_pricing():
-    """Get pricing tiers"""
+    """Get pricing tiers and delivery fees"""
     tiers = current_app.config.get('PRICING_TIERS', {})
     delivery_fees = current_app.config.get('DELIVERY_FEES', {})
 
     return jsonify({
         'pricing_tiers': tiers,
-        'delivery_fees': delivery_fees
+        'delivery_fees': delivery_fees,
+        'currency': 'KES'
     })
 
 
 @orders_bp.route('/calculate', methods=['POST'])
 def calculate_price():
-    """Calculate price for given quantity and delivery"""
+    """Calculate price for given quantity and delivery city"""
     data = request.get_json()
-    quantity = int(data.get('quantity', 1))
-    delivery_city = data.get('delivery_city', 'nairobi')
-    delivery_method = data.get('delivery_method', 'delivery')
+
+    if not data:
+        return jsonify({'error': 'JSON payload required'}), 400
+
+    try:
+        quantity = validate_quantity(data.get('quantity', 1), min_qty=1, max_qty=10000)
+        delivery_city = data.get('delivery_city', 'nairobi')
+    except ValidationError as e:
+        return jsonify({'error': e.message, 'field': e.field}), 400
 
     unit_price = get_price_per_card(quantity)
     subtotal = unit_price * quantity
 
     delivery_fees = current_app.config.get('DELIVERY_FEES', {})
-    delivery_fee = delivery_fees.get(delivery_city.lower(), delivery_fees.get('other', 800))
-    if delivery_method == 'pickup':
-        delivery_fee = 0
+    delivery_fee = delivery_fees.get(delivery_city.lower(), delivery_fees.get('other', 1000))
 
     total = subtotal + delivery_fee
 
@@ -352,38 +399,6 @@ def calculate_price():
         'unit_price': unit_price,
         'subtotal': subtotal,
         'delivery_fee': delivery_fee,
-        'total': total
-    })
-
-
-@orders_bp.route('/demo-tracking', methods=['GET'])
-def demo_tracking():
-    """
-    Demo endpoint for testing tracking page.
-    Returns fake order data that simulates a shipped order.
-    Use: /track/DEMO to test the tracking page.
-    """
-    from datetime import timedelta
-
-    # Simulate order shipped 10 minutes ago
-    shipped_time = datetime.utcnow() - timedelta(minutes=10)
-
-    return jsonify({
-        'order_number': 'DEMO',
-        'status': 'shipped',
-        'payment_status': 'paid',
-        'subtotal': 2000,
-        'delivery_fee': 300,
-        'discount': 0,
-        'total': 2300,
-        'delivery_method': 'delivery',
-        'delivery_city': 'nairobi_cbd',
-        'delivery_address': 'Kenyatta Avenue, Nairobi CBD',
-        'tracking_number': 'PKE-DEMO-001',
-        'created_at': (shipped_time - timedelta(hours=2)).isoformat(),
-        'paid_at': (shipped_time - timedelta(hours=1, minutes=50)).isoformat(),
-        'printed_at': (shipped_time - timedelta(minutes=30)).isoformat(),
-        'shipped_at': shipped_time.isoformat(),
-        'delivered_at': None,
-        'items': [{'quantity': 5, 'unit_price': 400, 'total_price': 2000, 'status': 'shipped'}]
+        'total': total,
+        'currency': 'KES'
     })
