@@ -1,293 +1,320 @@
 """
-Payment API Routes - M-Pesa Integration
-Production-ready with input validation and error handling
+Payment API Routes - FastAPI with M-Pesa Integration
 """
-from flask import Blueprint, request, jsonify, current_app
+import logging
 from datetime import datetime
 
-from src.models import db, Order, Payment, PrintJob
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+
+from src.database import get_db
+from src.models import Order, Payment, PrintJob
+from src.schemas.payments import (
+    PaymentInitiate, PaymentResponse, PaymentStatusResponse, MpesaCallback
+)
+from src.core.config import settings
 from src.services.mpesa import MpesaService
 from src.services.card_processor import PrintService
-from src.utils.validators import ValidationError, validate_phone, validate_order_number, sanitize_string
+
+router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
-def auto_print_order(order):
+async def auto_print_order(order: Order, db: AsyncSession) -> bool:
     """Automatically send order to printer after payment"""
     try:
-        item = order.items.first()
-        if not item or not item.pdf_file:
-            current_app.logger.error(f"[AUTO-PRINT] No PDF for order {order.order_number}")
+        if not order.items:
+            logger.error(f"[AUTO-PRINT] No items for order {order.order_number}")
+            return False
+
+        item = order.items[0]
+        if not item.pdf_file:
+            logger.error(f"[AUTO-PRINT] No PDF for order {order.order_number}")
             return False
 
         printer = PrintService(
-            printer_name=current_app.config.get('PRINTER_NAME', 'LXM-Card-Printer'),
-            mock_mode=current_app.config.get('MOCK_PRINTING', True)
+            printer_name=settings.printer_name,
+            mock_mode=settings.mock_printing
         )
 
         result = printer.print_card(item.pdf_file, copies=item.quantity)
 
-        if result['success']:
-            order.status = 'printing'
-            item.status = 'printing'
+        if result["success"]:
+            order.status = "printing"
+            item.status = "printing"
 
             # Create print job record
             print_job = PrintJob(
                 order_item_id=item.id,
-                job_id=result.get('job_id'),
+                job_id=result.get("job_id"),
                 copies=item.quantity,
-                status='printing' if not result.get('mock') else 'completed',
+                status="printing" if not result.get("mock") else "completed",
                 started_at=datetime.utcnow()
             )
-            if result.get('mock'):
+
+            if result.get("mock"):
                 print_job.completed_at = datetime.utcnow()
-                order.status = 'printed'
+                order.status = "printed"
                 order.printed_at = datetime.utcnow()
-                item.status = 'printed'
+                item.status = "printed"
                 item.printed_count = item.quantity
 
-            db.session.add(print_job)
-            db.session.commit()
+            db.add(print_job)
+            await db.commit()
 
-            current_app.logger.info(f"[AUTO-PRINT] Order {order.order_number} sent to printer: {result.get('job_id')}")
+            logger.info(f"[AUTO-PRINT] Order {order.order_number} sent to printer: {result.get('job_id')}")
             return True
         else:
-            current_app.logger.error(f"[AUTO-PRINT] Failed for order {order.order_number}: {result.get('message')}")
+            logger.error(f"[AUTO-PRINT] Failed for order {order.order_number}: {result.get('message')}")
             return False
 
     except Exception as e:
-        current_app.logger.error(f"[AUTO-PRINT] Error for order {order.order_number}: {e}")
+        logger.error(f"[AUTO-PRINT] Error for order {order.order_number}: {e}")
         return False
 
-payments_bp = Blueprint('payments', __name__, url_prefix='/api/payments')
 
-
-def get_mpesa_service():
+def get_mpesa_service() -> MpesaService:
     """Get configured M-Pesa service instance"""
     return MpesaService(
-        consumer_key=current_app.config.get('MPESA_CONSUMER_KEY'),
-        consumer_secret=current_app.config.get('MPESA_CONSUMER_SECRET'),
-        shortcode=current_app.config.get('MPESA_SHORTCODE'),
-        passkey=current_app.config.get('MPESA_PASSKEY'),
-        callback_url=current_app.config.get('MPESA_CALLBACK_URL'),
-        env=current_app.config.get('MPESA_ENV', 'sandbox')
+        consumer_key=settings.mpesa_consumer_key,
+        consumer_secret=settings.mpesa_consumer_secret,
+        shortcode=settings.mpesa_shortcode,
+        passkey=settings.mpesa_passkey,
+        callback_url=settings.mpesa_callback_url,
+        env=settings.mpesa_env
     )
 
 
-@payments_bp.route('/mpesa/initiate', methods=['POST'])
-def initiate_mpesa():
+@router.post("/mpesa/initiate", response_model=PaymentResponse)
+async def initiate_mpesa(request: PaymentInitiate, db: AsyncSession = Depends(get_db)):
     """
     Initiate M-Pesa STK Push payment
 
-    Expects JSON:
-    {
-        "order_number": "PK-240101-ABCD",
-        "phone": "0712345678"
-    }
+    - **order_number**: Order number (PK-YYMMDD-XXXX format)
+    - **phone**: Kenyan phone number (0712345678 format)
     """
-    data = request.get_json()
-
-    if not data:
-        return jsonify({'error': 'JSON payload required'}), 400
-
-    # Validate inputs
-    try:
-        order_number = validate_order_number(data.get('order_number'))
-        phone = validate_phone(data.get('phone'))
-    except ValidationError as e:
-        return jsonify({'error': e.message, 'field': e.field}), 400
-
     # Find order
-    order = Order.query.filter_by(order_number=order_number).first()
-    if not order:
-        return jsonify({'error': 'Order not found'}), 404
+    result = await db.execute(select(Order).where(Order.order_number == request.order_number))
+    order = result.scalar_one_or_none()
 
-    if order.payment_status == 'paid':
-        return jsonify({'error': 'Order is already paid'}), 400
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+
+    if order.payment_status == "paid":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order is already paid")
+
+    # Format phone for M-Pesa
+    import re
+    phone = re.sub(r'[\s\-\(\)\.]', '', request.phone)
+    if phone.startswith('+'):
+        phone = phone[1:]
+    if phone.startswith('0'):
+        phone = '254' + phone[1:]
+    elif phone.startswith('7') or phone.startswith('1'):
+        phone = '254' + phone
 
     # Check if M-Pesa is configured
-    if not current_app.config.get('MPESA_CONSUMER_KEY'):
+    if not settings.mpesa_consumer_key:
         # Mock payment for development
-        if current_app.config.get('MOCK_PRINTING', True):
+        if settings.mock_printing:
             # Create mock payment
             payment = Payment(
                 order_id=order.id,
                 transaction_id=f"MOCK-{datetime.now().strftime('%Y%m%d%H%M%S')}",
-                payment_method='mpesa',
+                payment_method="mpesa",
                 amount=order.total,
-                status='completed',
+                status="completed",
                 mpesa_receipt=f"QK{datetime.now().strftime('%H%M%S')}ABC",
                 phone_number=phone,
                 completed_at=datetime.utcnow()
             )
-            db.session.add(payment)
+            db.add(payment)
 
-            order.payment_status = 'paid'
-            order.payment_method = 'mpesa'
+            order.payment_status = "paid"
+            order.payment_method = "mpesa"
             order.payment_reference = payment.mpesa_receipt
             order.paid_at = datetime.utcnow()
-            order.status = 'processing'
-            db.session.commit()
+            order.status = "processing"
+            await db.commit()
+
+            # Refresh to get relationships
+            await db.refresh(order)
 
             # AUTO-PRINT: Trigger printing immediately after payment
-            print_success = auto_print_order(order)
+            print_success = await auto_print_order(order, db)
 
-            return jsonify({
-                'success': True,
-                'mock': True,
-                'message': 'Payment successful - printing started!' if print_success else 'Payment successful (MOCK MODE)',
-                'receipt': payment.mpesa_receipt,
-                'auto_printed': print_success
-            })
+            return PaymentResponse(
+                success=True,
+                mock=True,
+                message="Payment successful - printing started!" if print_success else "Payment successful (MOCK MODE)",
+                receipt=payment.mpesa_receipt,
+                auto_printed=print_success
+            )
         else:
-            return jsonify({'error': 'M-Pesa not configured'}), 500
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="M-Pesa not configured"
+            )
 
     # Initiate real M-Pesa payment
     mpesa = get_mpesa_service()
-    result = mpesa.initiate_stk_push(
+    mpesa_result = mpesa.initiate_stk_push(
         phone_number=phone,
         amount=order.total,
-        account_reference=order_number,
+        account_reference=request.order_number,
         description="PrintKe Card"
     )
 
-    if result['success']:
+    if mpesa_result["success"]:
         # Create pending payment record
         payment = Payment(
             order_id=order.id,
-            payment_method='mpesa',
+            payment_method="mpesa",
             amount=order.total,
-            phone_number=MpesaService._format_phone(phone),
-            checkout_request_id=result['checkout_request_id'],
-            merchant_request_id=result['merchant_request_id'],
-            status='pending'
+            phone_number=phone,
+            checkout_request_id=mpesa_result["checkout_request_id"],
+            merchant_request_id=mpesa_result["merchant_request_id"],
+            status="pending"
         )
-        db.session.add(payment)
-        db.session.commit()
+        db.add(payment)
+        await db.commit()
 
-        return jsonify({
-            'success': True,
-            'message': 'Please check your phone and enter M-Pesa PIN',
-            'checkout_request_id': result['checkout_request_id']
-        })
+        return PaymentResponse(
+            success=True,
+            message="Please check your phone and enter M-Pesa PIN",
+            checkout_request_id=mpesa_result["checkout_request_id"]
+        )
     else:
-        return jsonify({
-            'success': False,
-            'error': result.get('error', 'Payment initiation failed')
-        }), 400
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=mpesa_result.get("error", "Payment initiation failed")
+        )
 
 
-@payments_bp.route('/mpesa/callback', methods=['POST'])
-def mpesa_callback():
+@router.post("/mpesa/callback")
+async def mpesa_callback(callback: MpesaCallback, db: AsyncSession = Depends(get_db)):
     """
     M-Pesa callback endpoint - receives payment confirmation from Safaricom
     """
-    callback_data = request.get_json()
-    current_app.logger.info(f"[MPESA CALLBACK] {callback_data}")
+    logger.info(f"[MPESA CALLBACK] {callback}")
 
-    mpesa = get_mpesa_service()
-    result = mpesa.process_callback(callback_data)
+    stk_callback = callback.Body.stkCallback
+    checkout_request_id = stk_callback.CheckoutRequestID
+    result_code = stk_callback.ResultCode
 
-    if result['success'] and result.get('paid'):
-        checkout_request_id = result.get('checkout_request_id')
+    if result_code == 0:
+        # Payment successful - extract details
+        payment_info = {}
+        if stk_callback.CallbackMetadata:
+            for item in stk_callback.CallbackMetadata.Item:
+                if item.Name == "Amount":
+                    payment_info["amount"] = item.Value
+                elif item.Name == "MpesaReceiptNumber":
+                    payment_info["receipt"] = item.Value
+                elif item.Name == "PhoneNumber":
+                    payment_info["phone"] = item.Value
 
-        # Find payment by checkout_request_id
-        payment = Payment.query.filter_by(checkout_request_id=checkout_request_id).first()
+        # Find and update payment
+        result = await db.execute(
+            select(Payment).where(Payment.checkout_request_id == checkout_request_id)
+        )
+        payment = result.scalar_one_or_none()
 
         if payment:
-            payment.status = 'completed'
-            payment.mpesa_receipt = result.get('receipt')
-            payment.transaction_id = result.get('receipt')
+            payment.status = "completed"
+            payment.mpesa_receipt = payment_info.get("receipt")
+            payment.transaction_id = payment_info.get("receipt")
             payment.completed_at = datetime.utcnow()
 
             # Update order
             order = payment.order
-            order.payment_status = 'paid'
-            order.payment_method = 'mpesa'
-            order.payment_reference = result.get('receipt')
+            order.payment_status = "paid"
+            order.payment_method = "mpesa"
+            order.payment_reference = payment_info.get("receipt")
             order.paid_at = datetime.utcnow()
-            order.status = 'processing'
+            order.status = "processing"
 
-            db.session.commit()
-            current_app.logger.info(f"[MPESA] Payment confirmed for order {order.order_number}")
+            await db.commit()
+            logger.info(f"[MPESA] Payment confirmed for order {order.order_number}")
 
-    elif result['success'] and not result.get('paid'):
+            # AUTO-PRINT after successful payment
+            await auto_print_order(order, db)
+
+    else:
         # Payment failed or cancelled
-        checkout_request_id = result.get('checkout_request_id')
-        payment = Payment.query.filter_by(checkout_request_id=checkout_request_id).first()
+        result = await db.execute(
+            select(Payment).where(Payment.checkout_request_id == checkout_request_id)
+        )
+        payment = result.scalar_one_or_none()
 
         if payment:
-            payment.status = 'failed'
-            payment.error_message = result.get('error', 'Payment failed')
-            db.session.commit()
+            payment.status = "failed"
+            payment.error_message = stk_callback.ResultDesc
+            await db.commit()
 
     # Always return success to Safaricom
-    return jsonify({'ResultCode': 0, 'ResultDesc': 'Accepted'})
+    return {"ResultCode": 0, "ResultDesc": "Accepted"}
 
 
-@payments_bp.route('/mpesa/status/<checkout_request_id>', methods=['GET'])
-def check_payment_status(checkout_request_id):
+@router.get("/mpesa/status/{checkout_request_id}")
+async def check_payment_status(checkout_request_id: str, db: AsyncSession = Depends(get_db)):
     """Check status of M-Pesa payment"""
-    payment = Payment.query.filter_by(checkout_request_id=checkout_request_id).first()
+    result = await db.execute(
+        select(Payment).where(Payment.checkout_request_id == checkout_request_id)
+    )
+    payment = result.scalar_one_or_none()
 
     if not payment:
-        return jsonify({'error': 'Payment not found'}), 404
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
 
-    if payment.status == 'completed':
-        return jsonify({
-            'status': 'completed',
-            'paid': True,
-            'receipt': payment.mpesa_receipt,
-            'order_status': payment.order.status
-        })
-    elif payment.status == 'failed':
-        return jsonify({
-            'status': 'failed',
-            'paid': False,
-            'error': payment.error_message
-        })
+    if payment.status == "completed":
+        return {
+            "status": "completed",
+            "paid": True,
+            "receipt": payment.mpesa_receipt,
+            "order_status": payment.order.status
+        }
+    elif payment.status == "failed":
+        return {
+            "status": "failed",
+            "paid": False,
+            "error": payment.error_message
+        }
     else:
-        # Query M-Pesa for status
-        if current_app.config.get('MPESA_CONSUMER_KEY'):
+        # Query M-Pesa for status if configured
+        if settings.mpesa_consumer_key:
             mpesa = get_mpesa_service()
-            result = mpesa.query_stk_status(checkout_request_id)
+            mpesa_result = mpesa.query_stk_status(checkout_request_id)
 
-            if result['success'] and result.get('paid'):
-                # Update payment
-                payment.status = 'completed'
+            if mpesa_result["success"] and mpesa_result.get("paid"):
+                payment.status = "completed"
                 payment.completed_at = datetime.utcnow()
-                db.session.commit()
+                await db.commit()
 
-                return jsonify({
-                    'status': 'completed',
-                    'paid': True
-                })
+                return {"status": "completed", "paid": True}
 
-        return jsonify({
-            'status': 'pending',
-            'paid': False,
-            'message': 'Waiting for payment confirmation'
-        })
+        return {
+            "status": "pending",
+            "paid": False,
+            "message": "Waiting for payment confirmation"
+        }
 
 
-@payments_bp.route('/order/<order_number>/status', methods=['GET'])
-def check_order_payment(order_number):
+@router.get("/order/{order_number}/status", response_model=PaymentStatusResponse)
+async def check_order_payment(order_number: str, db: AsyncSession = Depends(get_db)):
     """Check payment status for an order"""
-    # Validate order number format
-    try:
-        order_number = validate_order_number(order_number)
-    except ValidationError as e:
-        return jsonify({'error': e.message}), 400
-
-    order = Order.query.filter_by(order_number=order_number).first()
+    result = await db.execute(select(Order).where(Order.order_number == order_number))
+    order = result.scalar_one_or_none()
 
     if not order:
-        return jsonify({'error': 'Order not found'}), 404
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
 
-    return jsonify({
-        'order_number': order.order_number,
-        'payment_status': order.payment_status,
-        'order_status': order.status,
-        'total': float(order.total),
-        'paid_at': order.paid_at.isoformat() if order.paid_at else None,
-        'receipt': order.payment_reference
-    })
+    return PaymentStatusResponse(
+        order_number=order.order_number,
+        payment_status=order.payment_status,
+        order_status=order.status,
+        total=order.total,
+        paid_at=order.paid_at,
+        receipt=order.payment_reference
+    )
