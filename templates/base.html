@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PrintKe{% endblock %} - Kenya's Premier Card Printing</title>
+    <meta name="description" content="Professional ID cards, membership cards, and business cards printed and delivered across Kenya. Same-day printing, next-day delivery.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/main.css">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="logo">
+                <span class="logo-icon">P</span>
+                <span class="logo-text">Print<span class="accent">Ke</span></span>
+            </a>
+            <div class="nav-links">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/order" class="nav-link">Order Cards</a>
+                <a href="/pricing" class="nav-link">Pricing</a>
+                <a href="/contact" class="nav-link">Contact</a>
+            </div>
+            <div class="nav-actions">
+                <a href="/order" class="btn btn-primary">Order Now</a>
+                <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="/" class="mobile-link">Home</a>
+        <a href="/order" class="mobile-link">Order Cards</a>
+        <a href="/pricing" class="mobile-link">Pricing</a>
+        <a href="/contact" class="mobile-link">Contact</a>
+    </div>
+
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="/" class="logo">
+                        <span class="logo-icon">P</span>
+                        <span class="logo-text">Print<span class="accent">Ke</span></span>
+                    </a>
+                    <p>Kenya's premier online card printing service. Professional quality, fast delivery.</p>
+                    <div class="social-links">
+                        <a href="#" class="social-link">FB</a>
+                        <a href="#" class="social-link">IG</a>
+                        <a href="#" class="social-link">TW</a>
+                        <a href="#" class="social-link">WA</a>
+                    </div>
+                </div>
+                <div class="footer-links">
+                    <h4>Services</h4>
+                    <a href="/order">ID Cards</a>
+                    <a href="/order">Membership Cards</a>
+                    <a href="/order">Business Cards</a>
+                    <a href="/order">Event Badges</a>
+                </div>
+                <div class="footer-links">
+                    <h4>Company</h4>
+                    <a href="/about">About Us</a>
+                    <a href="/pricing">Pricing</a>
+                    <a href="/templates">Templates</a>
+                    <a href="/contact">Contact</a>
+                </div>
+                <div class="footer-links">
+                    <h4>Contact</h4>
+                    <p><strong>Phone:</strong> +254 700 000 000</p>
+                    <p><strong>Email:</strong> info@printke.co.ke</p>
+                    <p><strong>Location:</strong> Nairobi, Kenya</p>
+                    <p><strong>Hours:</strong> Mon-Sat 8am-6pm</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 PrintKe. All rights reserved.</p>
+                <div class="footer-bottom-links">
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Terms of Service</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function toggleMobileMenu() {
+            document.getElementById('mobileMenu').classList.toggle('active');
+        }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

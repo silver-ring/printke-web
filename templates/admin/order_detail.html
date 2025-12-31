@@ -1,0 +1,313 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Order {{ order_number }}{% endblock %}
+{% block page_title %}Order {{ order_number }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="/admin/orders" class="btn btn-secondary">← Back to Orders</a>
+{% endblock %}
+
+{% block content %}
+<div id="orderContent">
+    <div style="text-align: center; padding: 60px;">
+        <div class="spinner" style="width: 50px; height: 50px; border: 4px solid var(--gray-200); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+        <p style="margin-top: 20px; color: var(--gray-600);">Loading order details...</p>
+    </div>
+</div>
+
+<style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const orderNumber = '{{ order_number }}';
+
+    async function loadOrderDetail() {
+        try {
+            const response = await fetch(`/api/admin/orders/${orderNumber}`);
+            const order = await response.json();
+
+            if (order.error) {
+                document.getElementById('orderContent').innerHTML = `
+                    <div class="card">
+                        <div class="card-body" style="text-align: center; padding: 60px;">
+                            <div style="font-size: 4rem; margin-bottom: 20px;">❌</div>
+                            <h2 style="color: var(--dark);">Order Not Found</h2>
+                            <p style="color: var(--gray-600);">This order does not exist.</p>
+                            <a href="/admin/orders" class="btn btn-primary" style="margin-top: 20px;">Back to Orders</a>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            document.getElementById('orderContent').innerHTML = `
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+                    <!-- Main Info -->
+                    <div>
+                        <!-- Status & Actions -->
+                        <div class="card" style="margin-bottom: 20px;">
+                            <div class="card-header">
+                                <h3 class="card-title">Order Status</h3>
+                                <div>
+                                    <span class="badge badge-${order.status}" style="font-size: 1rem; padding: 8px 16px;">${order.status.toUpperCase()}</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    ${order.payment_status !== 'paid' ? `
+                                        <button class="btn btn-primary" onclick="markPaid()">Mark as Paid</button>
+                                    ` : ''}
+                                    ${order.status === 'paid' || order.status === 'processing' ? `
+                                        <button class="btn btn-primary" onclick="printOrder()">🖨️ Send to Printer</button>
+                                    ` : ''}
+                                    ${order.status === 'printed' ? `
+                                        <button class="btn btn-primary" onclick="updateStatus('shipped')">📦 Mark as Shipped</button>
+                                    ` : ''}
+                                    ${order.status === 'shipped' ? `
+                                        <button class="btn btn-primary" onclick="updateStatus('delivered')">✓ Mark as Delivered</button>
+                                    ` : ''}
+                                    <a href="/api/orders/${orderNumber}/download" class="btn btn-secondary" target="_blank">📄 Download PDF</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Customer Info -->
+                        <div class="card" style="margin-bottom: 20px;">
+                            <div class="card-header">
+                                <h3 class="card-title">Customer Information</h3>
+                            </div>
+                            <div class="card-body">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div>
+                                        <div style="color: var(--gray-600); font-size: 0.875rem;">Name</div>
+                                        <div style="font-weight: 600;">${order.customer?.name || 'Guest'}</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: var(--gray-600); font-size: 0.875rem;">Phone</div>
+                                        <div style="font-weight: 600;">${order.customer?.phone || '-'}</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: var(--gray-600); font-size: 0.875rem;">Email</div>
+                                        <div style="font-weight: 600;">${order.customer?.email || '-'}</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: var(--gray-600); font-size: 0.875rem;">Delivery Method</div>
+                                        <div style="font-weight: 600;">${order.delivery?.method || 'N/A'}</div>
+                                    </div>
+                                </div>
+                                ${order.delivery?.address ? `
+                                    <div style="margin-top: 15px;">
+                                        <div style="color: var(--gray-600); font-size: 0.875rem;">Delivery Address</div>
+                                        <div style="font-weight: 600;">${order.delivery.address}</div>
+                                        <div style="color: var(--gray-600);">${order.delivery.city || ''}</div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <!-- Order Items -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Order Items</h3>
+                            </div>
+                            <div class="card-body">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Quantity</th>
+                                            <th>Unit Price</th>
+                                            <th>Total</th>
+                                            <th>Status</th>
+                                            <th>Preview</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${order.items.map((item, index) => `
+                                            <tr>
+                                                <td>${item.quantity} cards</td>
+                                                <td>KES ${item.unit_price.toLocaleString()}</td>
+                                                <td>KES ${item.total_price.toLocaleString()}</td>
+                                                <td><span class="badge badge-${item.status}">${item.status}</span></td>
+                                                <td>
+                                                    ${item.has_front ? `<a href="/api/orders/${orderNumber}/card-image/front" target="_blank" class="btn btn-secondary btn-sm">Front</a>` : ''}
+                                                    ${item.has_back ? `<a href="/api/orders/${orderNumber}/card-image/back" target="_blank" class="btn btn-secondary btn-sm">Back</a>` : ''}
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sidebar -->
+                    <div>
+                        <!-- Payment Summary -->
+                        <div class="card" style="margin-bottom: 20px;">
+                            <div class="card-header">
+                                <h3 class="card-title">Payment</h3>
+                                <span class="badge badge-${order.payment_status}">${order.payment_status}</span>
+                            </div>
+                            <div class="card-body">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                    <span style="color: var(--gray-600);">Subtotal</span>
+                                    <span>KES ${order.subtotal.toLocaleString()}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                    <span style="color: var(--gray-600);">Delivery</span>
+                                    <span>KES ${order.delivery_fee.toLocaleString()}</span>
+                                </div>
+                                ${order.discount > 0 ? `
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                        <span style="color: var(--gray-600);">Discount</span>
+                                        <span style="color: var(--success);">-KES ${order.discount.toLocaleString()}</span>
+                                    </div>
+                                ` : ''}
+                                <hr style="border: none; border-top: 1px solid var(--gray-200); margin: 15px 0;">
+                                <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.25rem;">
+                                    <span>Total</span>
+                                    <span>KES ${order.total.toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Timeline -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Timeline</h3>
+                            </div>
+                            <div class="card-body">
+                                <div style="display: flex; flex-direction: column; gap: 15px;">
+                                    <div style="display: flex; gap: 10px;">
+                                        <div style="width: 10px; height: 10px; background: var(--success); border-radius: 50%; margin-top: 5px;"></div>
+                                        <div>
+                                            <div style="font-weight: 600;">Order Created</div>
+                                            <div style="color: var(--gray-600); font-size: 0.875rem;">${new Date(order.timestamps.created).toLocaleString()}</div>
+                                        </div>
+                                    </div>
+                                    ${order.timestamps.paid ? `
+                                        <div style="display: flex; gap: 10px;">
+                                            <div style="width: 10px; height: 10px; background: var(--success); border-radius: 50%; margin-top: 5px;"></div>
+                                            <div>
+                                                <div style="font-weight: 600;">Payment Received</div>
+                                                <div style="color: var(--gray-600); font-size: 0.875rem;">${new Date(order.timestamps.paid).toLocaleString()}</div>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                    ${order.timestamps.printed ? `
+                                        <div style="display: flex; gap: 10px;">
+                                            <div style="width: 10px; height: 10px; background: var(--success); border-radius: 50%; margin-top: 5px;"></div>
+                                            <div>
+                                                <div style="font-weight: 600;">Printed</div>
+                                                <div style="color: var(--gray-600); font-size: 0.875rem;">${new Date(order.timestamps.printed).toLocaleString()}</div>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                    ${order.timestamps.shipped ? `
+                                        <div style="display: flex; gap: 10px;">
+                                            <div style="width: 10px; height: 10px; background: var(--success); border-radius: 50%; margin-top: 5px;"></div>
+                                            <div>
+                                                <div style="font-weight: 600;">Shipped</div>
+                                                <div style="color: var(--gray-600); font-size: 0.875rem;">${new Date(order.timestamps.shipped).toLocaleString()}</div>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                    ${order.timestamps.delivered ? `
+                                        <div style="display: flex; gap: 10px;">
+                                            <div style="width: 10px; height: 10px; background: var(--success); border-radius: 50%; margin-top: 5px;"></div>
+                                            <div>
+                                                <div style="font-weight: 600;">Delivered</div>
+                                                <div style="color: var(--gray-600); font-size: 0.875rem;">${new Date(order.timestamps.delivered).toLocaleString()}</div>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            console.error('Failed to load order:', error);
+            document.getElementById('orderContent').innerHTML = `
+                <div class="card">
+                    <div class="card-body" style="text-align: center; padding: 60px;">
+                        <div style="font-size: 4rem; margin-bottom: 20px;">❌</div>
+                        <h2 style="color: var(--dark);">Error Loading Order</h2>
+                        <p style="color: var(--gray-600);">Please try again later.</p>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    async function updateStatus(newStatus) {
+        if (!confirm(`Are you sure you want to mark this order as ${newStatus}?`)) return;
+
+        try {
+            const response = await fetch(`/api/admin/orders/${orderNumber}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                loadOrderDetail();
+            } else {
+                alert('Error: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Error updating status: ' + error.message);
+        }
+    }
+
+    async function printOrder() {
+        if (!confirm('Send this order to the printer?')) return;
+
+        try {
+            const response = await fetch(`/api/admin/orders/${orderNumber}/print`, {
+                method: 'POST'
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert(data.mock ? 'Print job queued (MOCK MODE)' : 'Print job sent to printer!');
+                loadOrderDetail();
+            } else {
+                alert('Print error: ' + (data.message || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Error printing: ' + error.message);
+        }
+    }
+
+    async function markPaid() {
+        const phone = prompt('Enter customer M-Pesa phone number:');
+        if (!phone) return;
+
+        try {
+            const response = await fetch('/api/payments/mpesa/initiate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order_number: orderNumber, phone: phone })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert('Payment processed successfully!');
+                loadOrderDetail();
+            } else {
+                alert('Payment error: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    }
+
+    loadOrderDetail();
+</script>
+{% endblock %}

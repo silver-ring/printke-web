@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Pricing{% endblock %}
+
+{% block content %}
+<section style="background: linear-gradient(135deg, var(--dark), var(--dark-light)); color: white; padding: 80px 0;">
+    <div class="container" style="text-align: center;">
+        <h1>Simple, Transparent Pricing</h1>
+        <p style="font-size: 1.25rem; color: var(--gray-400); max-width: 600px; margin: 20px auto 0;">
+            No hidden fees, no surprises. Pay per card with bulk discounts.
+        </p>
+    </div>
+</section>
+
+<section class="pricing" style="padding: 80px 0; background: var(--gray-100);">
+    <div class="container">
+        <div style="max-width: 900px; margin: 0 auto;">
+            <!-- Pricing Table -->
+            <div style="background: white; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-lg);">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;">
+                            <th style="padding: 20px; text-align: left;">Quantity</th>
+                            <th style="padding: 20px; text-align: center;">Price per Card</th>
+                            <th style="padding: 20px; text-align: center;">Savings</th>
+                            <th style="padding: 20px; text-align: center;">Example Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid var(--gray-200);">
+                            <td style="padding: 20px;">1 - 10 cards</td>
+                            <td style="padding: 20px; text-align: center; font-weight: 700; font-size: 1.25rem;">KES 400</td>
+                            <td style="padding: 20px; text-align: center; color: var(--gray-500);">-</td>
+                            <td style="padding: 20px; text-align: center;">10 cards = KES 4,000</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--gray-200); background: rgba(0,180,216,0.05);">
+                            <td style="padding: 20px;">11 - 50 cards</td>
+                            <td style="padding: 20px; text-align: center; font-weight: 700; font-size: 1.25rem;">KES 300</td>
+                            <td style="padding: 20px; text-align: center; color: var(--success); font-weight: 600;">Save 25%</td>
+                            <td style="padding: 20px; text-align: center;">50 cards = KES 15,000</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--gray-200);">
+                            <td style="padding: 20px;">51 - 200 cards</td>
+                            <td style="padding: 20px; text-align: center; font-weight: 700; font-size: 1.25rem;">KES 200</td>
+                            <td style="padding: 20px; text-align: center; color: var(--success); font-weight: 600;">Save 50%</td>
+                            <td style="padding: 20px; text-align: center;">100 cards = KES 20,000</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--gray-200); background: rgba(0,180,216,0.05);">
+                            <td style="padding: 20px;">201 - 500 cards</td>
+                            <td style="padding: 20px; text-align: center; font-weight: 700; font-size: 1.25rem;">KES 150</td>
+                            <td style="padding: 20px; text-align: center; color: var(--success); font-weight: 600;">Save 63%</td>
+                            <td style="padding: 20px; text-align: center;">300 cards = KES 45,000</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--gray-200);">
+                            <td style="padding: 20px;">501 - 1,000 cards</td>
+                            <td style="padding: 20px; text-align: center; font-weight: 700; font-size: 1.25rem;">KES 120</td>
+                            <td style="padding: 20px; text-align: center; color: var(--success); font-weight: 600;">Save 70%</td>
+                            <td style="padding: 20px; text-align: center;">500 cards = KES 60,000</td>
+                        </tr>
+                        <tr style="background: linear-gradient(135deg, rgba(0,255,136,0.1), rgba(0,180,216,0.1));">
+                            <td style="padding: 20px; font-weight: 700;">1,000+ cards</td>
+                            <td style="padding: 20px; text-align: center; font-weight: 700; font-size: 1.5rem; color: var(--primary);">KES 100</td>
+                            <td style="padding: 20px; text-align: center; color: var(--success); font-weight: 700;">Save 75%</td>
+                            <td style="padding: 20px; text-align: center; font-weight: 600;">1,000 cards = KES 100,000</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Delivery Fees -->
+            <div style="margin-top: 60px;">
+                <h2 style="text-align: center; margin-bottom: 30px; color: var(--dark);">Delivery Fees</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                    <div style="background: white; padding: 25px; border-radius: var(--radius-lg); text-align: center; box-shadow: var(--shadow);">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">🏢</div>
+                        <h4 style="color: var(--dark);">Nairobi CBD</h4>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">KES 200</div>
+                        <small style="color: var(--gray-600);">Same day delivery</small>
+                    </div>
+                    <div style="background: white; padding: 25px; border-radius: var(--radius-lg); text-align: center; box-shadow: var(--shadow);">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">🏙️</div>
+                        <h4 style="color: var(--dark);">Greater Nairobi</h4>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">KES 300</div>
+                        <small style="color: var(--gray-600);">Next day delivery</small>
+                    </div>
+                    <div style="background: white; padding: 25px; border-radius: var(--radius-lg); text-align: center; box-shadow: var(--shadow);">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">🌍</div>
+                        <h4 style="color: var(--dark);">Major Towns</h4>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">KES 500-700</div>
+                        <small style="color: var(--gray-600);">2-3 days delivery</small>
+                    </div>
+                    <div style="background: white; padding: 25px; border-radius: var(--radius-lg); text-align: center; box-shadow: var(--shadow);">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">📦</div>
+                        <h4 style="color: var(--dark);">Other Counties</h4>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">KES 1,000</div>
+                        <small style="color: var(--gray-600);">3-5 days delivery</small>
+                    </div>
+                </div>
+                <p style="text-align: center; margin-top: 20px; color: var(--gray-600);">
+                    <strong>Free pickup available</strong> from our Nairobi office
+                </p>
+            </div>
+
+            <!-- What's Included -->
+            <div style="margin-top: 60px;">
+                <h2 style="text-align: center; margin-bottom: 30px; color: var(--dark);">What's Included</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                    <div style="display: flex; align-items: center; gap: 15px; padding: 20px; background: white; border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+                        <span style="font-size: 1.5rem;">✓</span>
+                        <div>
+                            <strong style="color: var(--dark);">CR80 PVC Cards</strong>
+                            <div style="color: var(--gray-600); font-size: 0.875rem;">Bank-card quality, durable</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px; padding: 20px; background: white; border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+                        <span style="font-size: 1.5rem;">✓</span>
+                        <div>
+                            <strong style="color: var(--dark);">Full Color Printing</strong>
+                            <div style="color: var(--gray-600); font-size: 0.875rem;">CMYK high resolution</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px; padding: 20px; background: white; border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+                        <span style="font-size: 1.5rem;">✓</span>
+                        <div>
+                            <strong style="color: var(--dark);">Double-Sided</strong>
+                            <div style="color: var(--gray-600); font-size: 0.875rem;">Front and back printing</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px; padding: 20px; background: white; border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+                        <span style="font-size: 1.5rem;">✓</span>
+                        <div>
+                            <strong style="color: var(--dark);">Same-Day Printing</strong>
+                            <div style="color: var(--gray-600); font-size: 0.875rem;">Orders before 2 PM</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px; padding: 20px; background: white; border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+                        <span style="font-size: 1.5rem;">✓</span>
+                        <div>
+                            <strong style="color: var(--dark);">Quality Check</strong>
+                            <div style="color: var(--gray-600); font-size: 0.875rem;">Every card inspected</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px; padding: 20px; background: white; border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+                        <span style="font-size: 1.5rem;">✓</span>
+                        <div>
+                            <strong style="color: var(--dark);">Secure Packaging</strong>
+                            <div style="color: var(--gray-600); font-size: 0.875rem;">Cards arrive perfect</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CTA -->
+            <div style="text-align: center; margin-top: 60px;">
+                <a href="/order" class="btn btn-primary btn-lg">Start Your Order</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

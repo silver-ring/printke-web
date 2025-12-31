@@ -1,0 +1,136 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Stats Grid -->
+<div class="stats-grid" id="statsGrid">
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <div class="stat-icon blue">📦</div>
+        </div>
+        <div class="stat-value" id="statTotalOrders">-</div>
+        <div class="stat-label">Total Orders</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <div class="stat-icon orange">⏳</div>
+        </div>
+        <div class="stat-value" id="statPending">-</div>
+        <div class="stat-label">Pending Orders</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <div class="stat-icon green">💰</div>
+        </div>
+        <div class="stat-value" id="statRevenue">-</div>
+        <div class="stat-label">Total Revenue (KES)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <div class="stat-icon purple">🎴</div>
+        </div>
+        <div class="stat-value" id="statCards">-</div>
+        <div class="stat-label">Cards Printed</div>
+    </div>
+</div>
+
+<!-- Recent Orders -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Recent Orders</h3>
+        <a href="/admin/orders" class="btn btn-secondary btn-sm">View All</a>
+    </div>
+    <div class="card-body">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>Customer</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Payment</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="recentOrders">
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 40px;">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div style="margin-top: 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+    <div class="card">
+        <div class="card-body" style="text-align: center; padding: 40px;">
+            <div style="font-size: 3rem; margin-bottom: 15px;">🖨️</div>
+            <h3 style="color: var(--dark); margin-bottom: 10px;">Print Queue</h3>
+            <p style="color: var(--gray-600); margin-bottom: 20px;">Manage print jobs and queue</p>
+            <a href="/admin/print-queue" class="btn btn-primary">View Queue</a>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body" style="text-align: center; padding: 40px;">
+            <div style="font-size: 3rem; margin-bottom: 15px;">📊</div>
+            <h3 style="color: var(--dark); margin-bottom: 10px;">Reports</h3>
+            <p style="color: var(--gray-600); margin-bottom: 20px;">View sales and performance reports</p>
+            <button class="btn btn-secondary" disabled>Coming Soon</button>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body" style="text-align: center; padding: 40px;">
+            <div style="font-size: 3rem; margin-bottom: 15px;">⚙️</div>
+            <h3 style="color: var(--dark); margin-bottom: 10px;">Settings</h3>
+            <p style="color: var(--gray-600); margin-bottom: 20px;">Configure pricing and delivery</p>
+            <button class="btn btn-secondary" disabled>Coming Soon</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function loadDashboard() {
+        try {
+            const response = await fetch('/api/admin/dashboard');
+            const data = await response.json();
+
+            // Update stats
+            document.getElementById('statTotalOrders').textContent = data.orders?.total || 0;
+            document.getElementById('statPending').textContent = data.orders?.pending || 0;
+            document.getElementById('statRevenue').textContent = (data.revenue?.total || 0).toLocaleString();
+            document.getElementById('statCards').textContent = data.cards_printed || 0;
+
+            // Update recent orders table
+            const tbody = document.getElementById('recentOrders');
+            if (data.recent_orders && data.recent_orders.length > 0) {
+                tbody.innerHTML = data.recent_orders.map(order => `
+                    <tr>
+                        <td><a href="/admin/orders/${order.order_number}" style="color: var(--primary); font-weight: 600;">${order.order_number}</a></td>
+                        <td>${order.customer}</td>
+                        <td>KES ${order.total.toLocaleString()}</td>
+                        <td><span class="badge badge-${order.status}">${order.status}</span></td>
+                        <td><span class="badge badge-${order.payment_status}">${order.payment_status}</span></td>
+                        <td>${new Date(order.created_at).toLocaleDateString()}</td>
+                        <td><a href="/admin/orders/${order.order_number}" class="btn btn-secondary btn-sm">View</a></td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px;">No orders yet</td></tr>';
+            }
+        } catch (error) {
+            console.error('Failed to load dashboard:', error);
+        }
+    }
+
+    loadDashboard();
+    setInterval(loadDashboard, 30000);
+</script>
+{% endblock %}

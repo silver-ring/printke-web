@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Contact Us{% endblock %}
+
+{% block content %}
+<section style="background: linear-gradient(135deg, var(--dark), var(--dark-light)); color: white; padding: 80px 0;">
+    <div class="container" style="text-align: center;">
+        <h1>Get in Touch</h1>
+        <p style="font-size: 1.25rem; color: var(--gray-400); max-width: 600px; margin: 20px auto 0;">
+            Have questions? We're here to help. Reach out via WhatsApp for fastest response.
+        </p>
+    </div>
+</section>
+
+<section class="contact-section">
+    <div class="container">
+        <div class="contact-grid">
+            <div class="contact-info">
+                <h2>Contact Information</h2>
+                <p>We typically respond within 1 hour during business hours. For urgent orders, call or WhatsApp us directly.</p>
+
+                <div class="contact-item">
+                    <div class="contact-item-icon">📱</div>
+                    <div>
+                        <strong>WhatsApp</strong>
+                        <div style="color: var(--gray-600);">+254 700 000 000</div>
+                    </div>
+                </div>
+
+                <div class="contact-item">
+                    <div class="contact-item-icon">📞</div>
+                    <div>
+                        <strong>Phone</strong>
+                        <div style="color: var(--gray-600);">+254 700 000 000</div>
+                    </div>
+                </div>
+
+                <div class="contact-item">
+                    <div class="contact-item-icon">✉️</div>
+                    <div>
+                        <strong>Email</strong>
+                        <div style="color: var(--gray-600);">info@printke.co.ke</div>
+                    </div>
+                </div>
+
+                <div class="contact-item">
+                    <div class="contact-item-icon">📍</div>
+                    <div>
+                        <strong>Location</strong>
+                        <div style="color: var(--gray-600);">Nairobi, Kenya</div>
+                    </div>
+                </div>
+
+                <div class="contact-item">
+                    <div class="contact-item-icon">🕐</div>
+                    <div>
+                        <strong>Business Hours</strong>
+                        <div style="color: var(--gray-600);">Mon - Sat: 8:00 AM - 6:00 PM</div>
+                    </div>
+                </div>
+
+                <a href="https://wa.me/254700000000" class="btn btn-primary" style="margin-top: 20px;">
+                    Chat on WhatsApp
+                </a>
+            </div>
+
+            <div class="contact-form-card">
+                <h3 style="margin-bottom: 20px; color: var(--dark);">Send us a Message</h3>
+                <form id="contactForm">
+                    <div class="form-group">
+                        <label class="form-label">Name *</label>
+                        <input type="text" class="form-input" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email *</label>
+                        <input type="email" class="form-input" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input type="tel" class="form-input" name="phone">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Subject</label>
+                        <input type="text" class="form-input" name="subject">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Message *</label>
+                        <textarea class="form-input" name="message" rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Send Message</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ Section -->
+<section style="padding: 80px 0; background: var(--gray-100);">
+    <div class="container">
+        <div style="max-width: 800px; margin: 0 auto;">
+            <h2 style="text-align: center; margin-bottom: 40px; color: var(--dark);">Frequently Asked Questions</h2>
+
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <details style="background: white; padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+                    <summary style="font-weight: 600; cursor: pointer; color: var(--dark);">What file format should I upload?</summary>
+                    <p style="margin-top: 15px; color: var(--gray-600);">We accept PNG and JPG images. For best results, use 1012 x 638 pixels at 300 DPI. Our system will automatically resize your images to fit the CR80 card format.</p>
+                </details>
+
+                <details style="background: white; padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+                    <summary style="font-weight: 600; cursor: pointer; color: var(--dark);">How long does printing take?</summary>
+                    <p style="margin-top: 15px; color: var(--gray-600);">Orders placed before 2 PM are printed the same day. Delivery depends on your location - same day in Nairobi CBD, next day for greater Nairobi, and 2-5 days for other regions.</p>
+                </details>
+
+                <details style="background: white; padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+                    <summary style="font-weight: 600; cursor: pointer; color: var(--dark);">Do you offer design services?</summary>
+                    <p style="margin-top: 15px; color: var(--gray-600);">Yes! We have professional designers who can create your card design. Contact us via WhatsApp to discuss your requirements. Design services start from KES 2,000.</p>
+                </details>
+
+                <details style="background: white; padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+                    <summary style="font-weight: 600; cursor: pointer; color: var(--dark);">What's the minimum order quantity?</summary>
+                    <p style="margin-top: 15px; color: var(--gray-600);">There's no minimum order - you can order even a single card. However, ordering more gives you better per-card pricing with our bulk discounts.</p>
+                </details>
+
+                <details style="background: white; padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+                    <summary style="font-weight: 600; cursor: pointer; color: var(--dark);">What payment methods do you accept?</summary>
+                    <p style="margin-top: 15px; color: var(--gray-600);">We accept M-Pesa payments via STK Push. Just enter your phone number and confirm the payment on your phone. For large orders, we can also accept bank transfers.</p>
+                </details>
+
+                <details style="background: white; padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+                    <summary style="font-weight: 600; cursor: pointer; color: var(--dark);">Can I get a sample before ordering bulk?</summary>
+                    <p style="margin-top: 15px; color: var(--gray-600);">Yes! You can order a single card as a sample before placing a bulk order. This way you can verify the quality and colors before committing to a large order.</p>
+                </details>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('contactForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+
+        try {
+            // In production, this would send to an API endpoint
+            alert('Thank you for your message! We will get back to you soon.');
+            this.reset();
+        } catch (error) {
+            alert('Error sending message. Please try WhatsApp instead.');
+        }
+    });
+</script>
+{% endblock %}

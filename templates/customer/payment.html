@@ -1,0 +1,512 @@
+{% extends "base.html" %}
+
+{% block title %}Payment - Order {{ order_number }}{% endblock %}
+
+{% block content %}
+<section style="background: var(--gray-100); min-height: 100vh; padding: 60px 0;">
+    <div class="container">
+        <div style="max-width: 500px; margin: 0 auto;">
+            <!-- Order Summary Card -->
+            <div class="card" style="background: white; border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); overflow: hidden; margin-bottom: 20px;">
+                <div style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 25px; text-align: center;">
+                    <h2 style="margin: 0 0 10px;">Complete Your Payment</h2>
+                    <div style="font-size: 0.9rem; opacity: 0.9;">Order #{{ order_number }}</div>
+                </div>
+                <div style="padding: 30px;">
+                    <div id="orderSummary">
+                        <div style="text-align: center; padding: 20px;">
+                            <div class="spinner"></div>
+                            <p style="color: var(--gray-600); margin-top: 10px;">Loading order details...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Methods -->
+            <div class="card" style="background: white; border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); overflow: hidden;">
+                <div style="padding: 25px; border-bottom: 1px solid var(--gray-200);">
+                    <h3 style="margin: 0; color: var(--dark);">Select Payment Method</h3>
+                </div>
+                <div style="padding: 25px;">
+                    <!-- M-Pesa Option -->
+                    <div class="payment-option" onclick="selectPayment('mpesa')" style="border: 2px solid var(--gray-300); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 15px; cursor: pointer; transition: all 0.2s;" id="mpesaOption">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="width: 50px; height: 50px; background: #4CAF50; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.8rem;">M-PESA</div>
+                            <div>
+                                <div style="font-weight: 600; color: var(--dark);">M-Pesa</div>
+                                <div style="font-size: 0.875rem; color: var(--gray-600);">Pay via M-Pesa mobile money</div>
+                            </div>
+                            <div style="margin-left: auto;">
+                                <div class="radio-circle" style="width: 24px; height: 24px; border: 2px solid var(--gray-400); border-radius: 50%;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- M-Pesa Form -->
+                    <div id="mpesaForm" style="display: none; margin-top: 25px; padding-top: 25px; border-top: 1px solid var(--gray-200);">
+                        <div class="form-group">
+                            <label class="form-label">M-Pesa Phone Number</label>
+                            <input type="tel" class="form-input" id="mpesaPhone" placeholder="e.g., 0712 345 678" style="font-size: 1.1rem;">
+                            <small style="color: var(--gray-600);">Enter the phone number registered with M-Pesa</small>
+                        </div>
+                        <button class="btn btn-primary btn-lg" style="width: 100%; margin-top: 15px;" onclick="processMpesaPayment()" id="payBtn">
+                            Pay KES <span id="payAmount">0</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Notice -->
+            <div style="text-align: center; margin-top: 25px; padding: 20px;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--gray-600); font-size: 0.875rem;">
+                    <span style="font-size: 1.25rem;">🔒</span>
+                    <span>Your payment is secure and encrypted</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Processing Modal -->
+<div id="processingModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: var(--radius-xl); padding: 40px; text-align: center; max-width: 400px; margin: 20px;">
+        <div class="spinner" style="width: 60px; height: 60px; border-width: 5px; margin: 0 auto 20px;"></div>
+        <h3 style="color: var(--dark); margin-bottom: 10px;">Processing Payment</h3>
+        <p style="color: var(--gray-600);">Please wait...</p>
+    </div>
+</div>
+
+<!-- Payment Success Modal -->
+<div id="successModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: var(--radius-xl); padding: 40px; text-align: center; max-width: 400px; margin: 20px;">
+        <div style="width: 80px; height: 80px; background: var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 2.5rem; color: white;">✓</div>
+        <h3 style="color: var(--dark); margin-bottom: 10px;">Payment Successful!</h3>
+        <p style="color: var(--gray-600); margin-bottom: 15px;">KES <span id="paidAmount">0</span> received</p>
+        <p style="background: var(--gray-100); padding: 10px 15px; border-radius: var(--radius); font-family: monospace; color: var(--success);">
+            Receipt: <span id="receiptNumber">-</span>
+        </p>
+        <p style="color: var(--gray-500); font-size: 0.9rem; margin-top: 15px;">Starting printing...</p>
+    </div>
+</div>
+
+<!-- Printing Modal -->
+<div id="printingModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="text-align: center; max-width: 500px; margin: 20px; width: 90%;">
+        <!-- Printer Animation -->
+        <div class="printer-animation">
+            <div class="printer-machine">
+                <div class="printer-top"></div>
+                <div class="printer-body">
+                    <div class="printer-slot"></div>
+                    <div class="printer-light"></div>
+                </div>
+                <div class="card-output">
+                    <div class="card-design"></div>
+                </div>
+            </div>
+        </div>
+
+        <h2 style="color: white; margin: 30px 0 15px; font-size: 1.8rem;">Printing Your Cards</h2>
+        <p style="color: rgba(255,255,255,0.7); font-size: 1.1rem; margin-bottom: 25px;">
+            <span id="printingQty">5</span> cards are being printed
+        </p>
+
+        <!-- Progress Bar -->
+        <div class="print-progress-container">
+            <div class="print-progress-bar" id="printProgress"></div>
+        </div>
+        <p style="color: #48bb78; font-size: 1rem; margin-top: 15px; font-weight: 600;" id="printStatus">
+            Initializing printer...
+        </p>
+    </div>
+</div>
+
+<!-- Print Complete Modal -->
+<div id="printCompleteModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #065f46 0%, #059669 100%); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="text-align: center; max-width: 500px; margin: 20px; width: 90%;">
+        <div class="cards-done">
+            <div class="card-stack">
+                <div class="printed-card c1"></div>
+                <div class="printed-card c2"></div>
+                <div class="printed-card c3"></div>
+            </div>
+            <div class="checkmark-circle">✓</div>
+        </div>
+
+        <h2 style="color: white; margin: 30px 0 15px; font-size: 1.8rem;">Printing Complete!</h2>
+        <p style="color: rgba(255,255,255,0.8); font-size: 1.1rem; margin-bottom: 10px;">
+            Your <span id="completedQty">5</span> cards are ready
+        </p>
+        <p style="color: rgba(255,255,255,0.6);">
+            Redirecting to delivery tracking...
+        </p>
+        <div class="redirect-spinner"></div>
+    </div>
+</div>
+
+<style>
+    .payment-option.selected {
+        border-color: var(--primary) !important;
+        background: rgba(0, 180, 216, 0.05);
+    }
+    .payment-option.selected .radio-circle {
+        border-color: var(--primary) !important;
+        background: var(--primary);
+    }
+    .payment-option.selected .radio-circle::after {
+        content: '✓';
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+    }
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid var(--gray-200);
+        border-top-color: var(--primary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Redirect Spinner */
+    .redirect-spinner {
+        width: 30px;
+        height: 30px;
+        border: 3px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 20px auto 0;
+    }
+
+    /* Printer Animation */
+    .printer-animation {
+        display: flex;
+        justify-content: center;
+        padding: 20px 0 60px;
+    }
+    .printer-machine {
+        position: relative;
+        width: 200px;
+        height: 100px;
+    }
+    .printer-top {
+        position: absolute;
+        top: 0;
+        left: 30px;
+        right: 30px;
+        height: 30px;
+        background: linear-gradient(180deg, #5a6270, #4a5260);
+        border-radius: 10px 10px 0 0;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+    }
+    .printer-body {
+        position: absolute;
+        top: 25px;
+        left: 0;
+        right: 0;
+        height: 70px;
+        background: linear-gradient(180deg, #6b7280, #4b5563);
+        border-radius: 10px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    }
+    .printer-slot {
+        position: absolute;
+        top: 15px;
+        left: 30px;
+        right: 30px;
+        height: 8px;
+        background: #1f2937;
+        border-radius: 4px;
+    }
+    .printer-light {
+        position: absolute;
+        top: 35px;
+        right: 20px;
+        width: 10px;
+        height: 10px;
+        background: #10b981;
+        border-radius: 50%;
+        box-shadow: 0 0 10px #10b981;
+        animation: blink 0.5s ease-in-out infinite;
+    }
+    @keyframes blink {
+        0%, 100% { opacity: 1; box-shadow: 0 0 10px #10b981; }
+        50% { opacity: 0.4; box-shadow: 0 0 5px #10b981; }
+    }
+    .card-output {
+        position: absolute;
+        bottom: -40px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 85px;
+        height: 54px;
+        background: white;
+        border-radius: 5px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        animation: printCard 1.8s ease-in-out infinite;
+    }
+    .card-design {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        right: 8px;
+        height: 16px;
+        background: linear-gradient(90deg, #00b4d8, #0077b6);
+        border-radius: 3px;
+    }
+    .card-design::after {
+        content: '';
+        position: absolute;
+        bottom: -12px;
+        left: 0;
+        width: 70%;
+        height: 6px;
+        background: #e5e7eb;
+        border-radius: 2px;
+    }
+    @keyframes printCard {
+        0% {
+            bottom: 5px;
+            opacity: 0;
+        }
+        15% {
+            bottom: 5px;
+            opacity: 1;
+        }
+        70% {
+            bottom: -35px;
+            opacity: 1;
+        }
+        90% {
+            bottom: -45px;
+            opacity: 0.5;
+        }
+        100% {
+            bottom: -50px;
+            opacity: 0;
+        }
+    }
+
+    /* Progress Bar */
+    .print-progress-container {
+        width: 100%;
+        height: 10px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 5px;
+        overflow: hidden;
+    }
+    .print-progress-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #48bb78, #38a169);
+        border-radius: 5px;
+        transition: width 0.5s ease;
+    }
+
+    /* Print Complete */
+    .cards-done {
+        position: relative;
+        height: 140px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .card-stack {
+        position: relative;
+        width: 100px;
+        height: 65px;
+    }
+    .printed-card {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: white;
+        border-radius: 6px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    .printed-card::before {
+        content: '';
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        right: 8px;
+        height: 15px;
+        background: linear-gradient(90deg, var(--primary), #0077b6);
+        border-radius: 3px;
+    }
+    .c1 { transform: rotate(-8deg); }
+    .c2 { transform: rotate(-3deg) translateY(-5px); }
+    .c3 { transform: rotate(2deg) translateY(-10px); }
+    .checkmark-circle {
+        position: absolute;
+        top: -10px;
+        right: calc(50% - 70px);
+        width: 40px;
+        height: 40px;
+        background: #48bb78;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+        font-weight: bold;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const orderNumber = '{{ order_number }}';
+    let orderData = null;
+
+    async function loadOrder() {
+        try {
+            const response = await fetch(`/api/orders/${orderNumber}`);
+            orderData = await response.json();
+
+            if (orderData.error) {
+                document.getElementById('orderSummary').innerHTML = `
+                    <div style="text-align: center; color: var(--danger);">
+                        <p>Order not found.</p>
+                        <a href="/order" class="btn btn-primary" style="margin-top: 15px;">Create New Order</a>
+                    </div>
+                `;
+                return;
+            }
+
+            if (orderData.payment_status === 'paid') {
+                window.location.href = `/track/${orderNumber}`;
+                return;
+            }
+
+            const qty = orderData.items ? orderData.items.reduce((sum, i) => sum + i.quantity, 0) : 1;
+            document.getElementById('orderSummary').innerHTML = `
+                <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--gray-200);">
+                    <span style="color: var(--gray-600);">Cards</span>
+                    <span style="font-weight: 600;">${qty} cards</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--gray-200);">
+                    <span style="color: var(--gray-600);">Subtotal</span>
+                    <span>KES ${orderData.subtotal.toLocaleString()}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--gray-200);">
+                    <span style="color: var(--gray-600);">Delivery</span>
+                    <span>KES ${orderData.delivery_fee.toLocaleString()}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 15px 0; font-size: 1.25rem; font-weight: 700;">
+                    <span style="color: var(--dark);">Total</span>
+                    <span style="color: var(--primary);">KES ${orderData.total.toLocaleString()}</span>
+                </div>
+            `;
+            document.getElementById('payAmount').textContent = orderData.total.toLocaleString();
+
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+
+    function selectPayment(method) {
+        document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected'));
+        if (method === 'mpesa') {
+            document.getElementById('mpesaOption').classList.add('selected');
+            document.getElementById('mpesaForm').style.display = 'block';
+        }
+    }
+
+    async function processMpesaPayment() {
+        const phone = document.getElementById('mpesaPhone').value.trim();
+        if (!phone) {
+            alert('Please enter your M-Pesa phone number');
+            return;
+        }
+
+        document.getElementById('processingModal').style.display = 'flex';
+        document.getElementById('payBtn').disabled = true;
+
+        try {
+            const response = await fetch('/api/payments/mpesa/initiate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    order_number: orderNumber,
+                    phone: phone.replace(/\s/g, '')
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Show payment success
+                document.getElementById('processingModal').style.display = 'none';
+                document.getElementById('receiptNumber').textContent = data.receipt || 'Confirmed';
+                document.getElementById('paidAmount').textContent = orderData.total.toLocaleString();
+                document.getElementById('successModal').style.display = 'flex';
+
+                // After 2 seconds, show printing
+                setTimeout(() => {
+                    document.getElementById('successModal').style.display = 'none';
+                    startPrinting();
+                }, 2000);
+            } else {
+                document.getElementById('processingModal').style.display = 'none';
+                document.getElementById('payBtn').disabled = false;
+                alert('Payment failed: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
+            document.getElementById('processingModal').style.display = 'none';
+            document.getElementById('payBtn').disabled = false;
+            alert('Payment error: ' + error.message);
+        }
+    }
+
+    function startPrinting() {
+        document.getElementById('printingModal').style.display = 'flex';
+
+        const qty = orderData.items ? orderData.items.reduce((sum, i) => sum + i.quantity, 0) : 1;
+        document.getElementById('printingQty').textContent = qty;
+        document.getElementById('completedQty').textContent = qty;
+
+        const progressBar = document.getElementById('printProgress');
+        const statusText = document.getElementById('printStatus');
+
+        const steps = [
+            { progress: 10, text: 'Initializing printer...', delay: 800 },
+            { progress: 25, text: 'Loading card stock...', delay: 1200 },
+            { progress: 40, text: 'Printing front side...', delay: 1500 },
+            { progress: 60, text: 'Drying...', delay: 1000 },
+            { progress: 80, text: 'Printing back side...', delay: 1500 },
+            { progress: 95, text: 'Finishing...', delay: 800 },
+            { progress: 100, text: 'Complete!', delay: 500 }
+        ];
+
+        let totalDelay = 0;
+        steps.forEach(step => {
+            totalDelay += step.delay;
+            setTimeout(() => {
+                progressBar.style.width = step.progress + '%';
+                statusText.textContent = step.text;
+            }, totalDelay);
+        });
+
+        // Show complete and auto-redirect
+        setTimeout(() => {
+            document.getElementById('printingModal').style.display = 'none';
+            document.getElementById('printCompleteModal').style.display = 'flex';
+
+            // Auto redirect to tracking after 2 seconds
+            setTimeout(() => {
+                window.location.href = `/track/${orderNumber}`;
+            }, 2000);
+        }, totalDelay + 1000);
+    }
+
+    loadOrder();
+</script>
+{% endblock %}

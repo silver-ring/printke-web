@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Card Templates{% endblock %}
+
+{% block content %}
+<section style="background: linear-gradient(135deg, var(--dark), var(--dark-light)); color: white; padding: 80px 0;">
+    <div class="container" style="text-align: center;">
+        <h1>Card Templates</h1>
+        <p style="font-size: 1.25rem; color: var(--gray-400); max-width: 600px; margin: 20px auto 0;">
+            Choose from our professional templates or upload your own design
+        </p>
+    </div>
+</section>
+
+<section style="padding: 80px 0; background: var(--gray-100);">
+    <div class="container">
+        <!-- Category Filter -->
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 40px;">
+            <button class="btn btn-primary" onclick="filterTemplates('all')">All</button>
+            <button class="btn btn-secondary" onclick="filterTemplates('school')">Schools</button>
+            <button class="btn btn-secondary" onclick="filterTemplates('corporate')">Corporate</button>
+            <button class="btn btn-secondary" onclick="filterTemplates('church')">Churches</button>
+            <button class="btn btn-secondary" onclick="filterTemplates('gym')">Gyms & Clubs</button>
+            <button class="btn btn-secondary" onclick="filterTemplates('event')">Events</button>
+        </div>
+
+        <!-- Templates Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
+            <!-- School Templates -->
+            <div class="template-card" data-category="school" style="background: white; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow);">
+                <div style="height: 200px; background: linear-gradient(135deg, #1e3a5f, #2c5282); display: flex; align-items: center; justify-content: center; color: white;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">🎓</div>
+                        <div style="font-weight: 600;">Student ID Card</div>
+                    </div>
+                </div>
+                <div style="padding: 20px;">
+                    <h3 style="color: var(--dark); margin-bottom: 10px;">School Student ID</h3>
+                    <p style="color: var(--gray-600); font-size: 0.875rem; margin-bottom: 15px;">Professional student identification card with photo, name, class, and admission number.</p>
+                    <a href="/order" class="btn btn-primary btn-sm">Use Template</a>
+                </div>
+            </div>
+
+            <div class="template-card" data-category="school" style="background: white; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow);">
+                <div style="height: 200px; background: linear-gradient(135deg, #553c9a, #7c3aed); display: flex; align-items: center; justify-content: center; color: white;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">👨‍🏫</div>
+                        <div style="font-weight: 600;">Staff ID Card</div>
+                    </div>
+                </div>
+                <div style="padding: 20px;">
+                    <h3 style="color: var(--dark); margin-bottom: 10px;">School Staff ID</h3>
+                    <p style="color: var(--gray-600); font-size: 0.875rem; margin-bottom: 15px;">Teacher and staff identification card with department and employee details.</p>
+                    <a href="/order" class="btn btn-primary btn-sm">Use Template</a>
+                </div>
+            </div>
+
+            <!-- Corporate Templates -->
+            <div class="template-card" data-category="corporate" style="background: white; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow);">
+                <div style="height: 200px; background: linear-gradient(135deg, #1a1a2e, #16213e); display: flex; align-items: center; justify-content: center; color: white;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">💼</div>
+                        <div style="font-weight: 600;">Employee Badge</div>
+                    </div>
+                </div>
+                <div style="padding: 20px;">
+                    <h3 style="color: var(--dark); margin-bottom: 10px;">Corporate Employee ID</h3>
+                    <p style="color: var(--gray-600); font-size: 0.875rem; margin-bottom: 15px;">Professional employee identification with company branding, photo, and department.</p>
+                    <a href="/order" class="btn btn-primary btn-sm">Use Template</a>
+                </div>
+            </div>
+
+            <div class="template-card" data-category="corporate" style="background: white; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow);">
+                <div style="height: 200px; background: linear-gradient(135deg, #065f46, #059669); display: flex; align-items: center; justify-content: center; color: white;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">🏢</div>
+                        <div style="font-weight: 600;">Access Card</div>
+                    </div>
+                </div>
+                <div style="padding: 20px;">
+                    <h3 style="color: var(--dark); margin-bottom: 10px;">Building Access Card</h3>
+                    <p style="color: var(--gray-600); font-size: 0.875rem; margin-bottom: 15px;">Secure access card for buildings and facilities with employee details.</p>
+                    <a href="/order" class="btn btn-primary btn-sm">Use Template</a>
+                </div>
+            </div>
+
+            <!-- Church Templates -->
+            <div class="template-card" data-category="church" style="background: white; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow);">
+                <div style="height: 200px; background: linear-gradient(135deg, #7c2d12, #c2410c); display: flex; align-items: center; justify-content: center; color: white;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">⛪</div>
+                        <div style="font-weight: 600;">Church Member</div>
+                    </div>
+                </div>
+                <div style="padding: 20px;">
+                    <h3 style="color: var(--dark); margin-bottom: 10px;">Church Membership Card</h3>
+                    <p style="color: var(--gray-600); font-size: 0.875rem; margin-bottom: 15px;">Elegant membership card for church members with photo and member details.</p>
+                    <a href="/order" class="btn btn-primary btn-sm">Use Template</a>
+                </div>
+            </div>
+
+            <!-- Gym Templates -->
+            <div class="template-card" data-category="gym" style="background: white; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow);">
+                <div style="height: 200px; background: linear-gradient(135deg, #dc2626, #f87171); display: flex; align-items: center; justify-content: center; color: white;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">🏋️</div>
+                        <div style="font-weight: 600;">Gym Member</div>
+                    </div>
+                </div>
+                <div style="padding: 20px;">
+                    <h3 style="color: var(--dark); margin-bottom: 10px;">Gym Membership Card</h3>
+                    <p style="color: var(--gray-600); font-size: 0.875rem; margin-bottom: 15px;">Dynamic membership card for gyms and fitness centers with expiry date.</p>
+                    <a href="/order" class="btn btn-primary btn-sm">Use Template</a>
+                </div>
+            </div>
+
+            <!-- Event Templates -->
+            <div class="template-card" data-category="event" style="background: white; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow);">
+                <div style="height: 200px; background: linear-gradient(135deg, #0891b2, #22d3ee); display: flex; align-items: center; justify-content: center; color: white;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">🎪</div>
+                        <div style="font-weight: 600;">Event Badge</div>
+                    </div>
+                </div>
+                <div style="padding: 20px;">
+                    <h3 style="color: var(--dark); margin-bottom: 10px;">Conference Badge</h3>
+                    <p style="color: var(--gray-600); font-size: 0.875rem; margin-bottom: 15px;">Professional event badge for conferences, seminars, and corporate events.</p>
+                    <a href="/order" class="btn btn-primary btn-sm">Use Template</a>
+                </div>
+            </div>
+
+            <div class="template-card" data-category="event" style="background: white; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow);">
+                <div style="height: 200px; background: linear-gradient(135deg, #7c3aed, #a78bfa); display: flex; align-items: center; justify-content: center; color: white;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">🎫</div>
+                        <div style="font-weight: 600;">VIP Pass</div>
+                    </div>
+                </div>
+                <div style="padding: 20px;">
+                    <h3 style="color: var(--dark); margin-bottom: 10px;">VIP Access Pass</h3>
+                    <p style="color: var(--gray-600); font-size: 0.875rem; margin-bottom: 15px;">Premium VIP access cards for special events and exclusive access areas.</p>
+                    <a href="/order" class="btn btn-primary btn-sm">Use Template</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Design CTA -->
+        <div style="text-align: center; margin-top: 60px; padding: 40px; background: white; border-radius: var(--radius-xl); box-shadow: var(--shadow);">
+            <h2 style="color: var(--dark); margin-bottom: 15px;">Have Your Own Design?</h2>
+            <p style="color: var(--gray-600); margin-bottom: 25px;">Upload your custom design and we'll print it exactly as you want.</p>
+            <a href="/order" class="btn btn-primary btn-lg">Upload Your Design</a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function filterTemplates(category) {
+        const cards = document.querySelectorAll('.template-card');
+        cards.forEach(card => {
+            if (category === 'all' || card.dataset.category === category) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        // Update button styles
+        document.querySelectorAll('button[onclick^="filterTemplates"]').forEach(btn => {
+            btn.className = 'btn btn-secondary';
+        });
+        event.target.className = 'btn btn-primary';
+    }
+</script>
+{% endblock %}

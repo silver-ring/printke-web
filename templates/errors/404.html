@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Page Not Found{% endblock %}
+
+{% block content %}
+<section style="min-height: 70vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px;">
+    <div style="text-align: center; max-width: 500px;">
+        <div style="font-size: 8rem; font-weight: 800; color: var(--primary); line-height: 1;">404</div>
+        <h1 style="color: var(--dark); margin: 20px 0;">Page Not Found</h1>
+        <p style="color: var(--gray-600); margin-bottom: 30px;">
+            Sorry, we couldn't find the page you're looking for. It might have been moved or doesn't exist.
+        </p>
+        <div style="display: flex; gap: 15px; justify-content: center;">
+            <a href="/" class="btn btn-primary">Go Home</a>
+            <a href="/order" class="btn btn-secondary">Order Cards</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+
+{% block title %}Order Cards{% endblock %}
+
+{% block content %}
+<section class="order-section" style="background: var(--gray-100); min-height: 100vh;">
+    <div class="container">
+        <div class="order-form">
+            <div class="form-header">
+                <h2>Order Your Cards</h2>
+                <p>Upload your design and we'll print professional quality cards</p>
+            </div>
+            <div class="form-body">
+                <form id="orderForm" enctype="multipart/form-data">
+                    <!-- Upload Section -->
+                    <h3 style="margin-bottom: 20px; color: var(--dark);">1. Upload Card Design</h3>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Front of Card *</label>
+                            <div class="upload-box" id="frontUpload" onclick="document.getElementById('frontInput').click()">
+                                <div class="upload-icon">📷</div>
+                                <div class="upload-text">
+                                    <strong>Click to upload</strong> or drag and drop<br>
+                                    <small>PNG, JPG up to 10MB</small>
+                                </div>
+                                <img class="upload-preview" id="frontPreview">
+                            </div>
+                            <input type="file" id="frontInput" name="front" accept="image/*" hidden required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Back of Card *</label>
+                            <div class="upload-box" id="backUpload" onclick="document.getElementById('backInput').click()">
+                                <div class="upload-icon">📷</div>
+                                <div class="upload-text">
+                                    <strong>Click to upload</strong> or drag and drop<br>
+                                    <small>PNG, JPG up to 10MB</small>
+                                </div>
+                                <img class="upload-preview" id="backPreview">
+                            </div>
+                            <input type="file" id="backInput" name="back" accept="image/*" hidden required>
+                        </div>
+                    </div>
+
+                    <!-- Quantity -->
+                    <h3 style="margin: 30px 0 20px; color: var(--dark);">2. Select Quantity</h3>
+
+                    <div class="form-group">
+                        <label class="form-label">Number of Cards *</label>
+                        <input type="number" class="form-input" id="quantity" name="quantity" min="1" value="1" required>
+                        <small style="color: var(--gray-600);">Bulk discounts: 51+ = KES 200, 201+ = KES 150, 501+ = KES 120, 1000+ = KES 100 per card</small>
+                    </div>
+
+                    <!-- Customer Details -->
+                    <h3 style="margin: 30px 0 20px; color: var(--dark);">3. Your Details</h3>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Full Name *</label>
+                            <input type="text" class="form-input" id="name" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Phone Number *</label>
+                            <input type="tel" class="form-input" id="phone" name="phone" placeholder="0712 345 678" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" id="email" name="email" placeholder="For order updates (optional)">
+                    </div>
+
+                    <!-- Delivery -->
+                    <h3 style="margin: 30px 0 20px; color: var(--dark);">4. Delivery</h3>
+
+                    <input type="hidden" id="deliveryMethod" name="delivery_method" value="delivery">
+
+                    <div id="deliveryFields">
+                        <div class="form-group">
+                            <label class="form-label">Delivery Location *</label>
+                            <select class="form-input" id="deliveryCity" name="delivery_city" required>
+                                <option value="nairobi_cbd">Nairobi CBD - KES 200</option>
+                                <option value="nairobi">Greater Nairobi - KES 300</option>
+                                <option value="thika">Thika - KES 350</option>
+                                <option value="nakuru">Nakuru - KES 500</option>
+                                <option value="eldoret">Eldoret - KES 600</option>
+                                <option value="mombasa">Mombasa - KES 700</option>
+                                <option value="kisumu">Kisumu - KES 700</option>
+                                <option value="other">Other Counties - KES 1,000</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Delivery Address *</label>
+                            <textarea class="form-input" id="deliveryAddress" name="delivery_address" rows="3" placeholder="Building name, street, landmarks..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Price Summary -->
+                    <div class="price-summary" id="priceSummary">
+                        <h3 style="margin-bottom: 20px; color: var(--dark);">Order Summary</h3>
+                        <div class="price-row">
+                            <span class="price-label">Cards (<span id="summaryQty">1</span> x KES <span id="summaryUnitPrice">300</span>)</span>
+                            <span class="price-value">KES <span id="summarySubtotal">300</span></span>
+                        </div>
+                        <div class="price-row">
+                            <span class="price-label">Delivery</span>
+                            <span class="price-value">KES <span id="summaryDelivery">150</span></span>
+                        </div>
+                        <div class="price-row total">
+                            <span>Total</span>
+                            <span>KES <span id="summaryTotal">450</span></span>
+                        </div>
+                    </div>
+
+                    <!-- Submit -->
+                    <div style="margin-top: 30px;">
+                        <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;" id="submitBtn">
+                            Proceed to Payment
+                        </button>
+                        <p style="text-align: center; margin-top: 15px; color: var(--gray-600); font-size: 0.875rem;">
+                            You'll pay via M-Pesa after reviewing your order
+                        </p>
+                    </div>
+                </form>
+
+                <!-- Loading/Success States -->
+                <div id="loadingState" style="display: none; text-align: center; padding: 40px;">
+                    <div class="spinner"></div>
+                    <p>Processing your order...</p>
+                </div>
+
+                <div id="successState" style="display: none; text-align: center; padding: 40px;">
+                    <div style="font-size: 4rem; margin-bottom: 20px;">✅</div>
+                    <h2 style="color: var(--dark);">Order Created!</h2>
+                    <p style="color: var(--gray-600); margin-bottom: 20px;">Your order number is:</p>
+                    <div class="order-number" id="orderNumber"></div>
+                    <p style="color: var(--gray-600); margin-bottom: 30px;">Redirecting to payment...</p>
+                    <a href="#" id="paymentLink" class="btn btn-primary btn-lg">Proceed to Payment</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Image upload preview
+    function setupUpload(inputId, previewId, boxId) {
+        const input = document.getElementById(inputId);
+        const preview = document.getElementById(previewId);
+        const box = document.getElementById(boxId);
+
+        input.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    box.classList.add('has-image');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Drag and drop
+        box.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            box.style.borderColor = 'var(--primary)';
+        });
+
+        box.addEventListener('dragleave', function(e) {
+            box.style.borderColor = '';
+        });
+
+        box.addEventListener('drop', function(e) {
+            e.preventDefault();
+            box.style.borderColor = '';
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                input.files = e.dataTransfer.files;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    box.classList.add('has-image');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    setupUpload('frontInput', 'frontPreview', 'frontUpload');
+    setupUpload('backInput', 'backPreview', 'backUpload');
+
+    // Pricing calculation - Updated based on Nairobi market research
+    const pricingTiers = {
+        single: { min: 1, max: 10, price: 400 },
+        small: { min: 11, max: 50, price: 300 },
+        medium: { min: 51, max: 200, price: 200 },
+        standard: { min: 201, max: 500, price: 150 },
+        large: { min: 501, max: 1000, price: 120 },
+        bulk: { min: 1001, max: 999999, price: 100 }
+    };
+
+    const deliveryFees = {
+        nairobi_cbd: 200,
+        nairobi: 300,
+        thika: 350,
+        nakuru: 500,
+        eldoret: 600,
+        mombasa: 700,
+        kisumu: 700,
+        other: 1000
+    };
+
+    function calculatePrice() {
+        const quantity = parseInt(document.getElementById('quantity').value) || 1;
+        const deliveryMethod = document.getElementById('deliveryMethod').value;
+        const deliveryCity = document.getElementById('deliveryCity').value;
+
+        let unitPrice = 300;
+        for (const tier of Object.values(pricingTiers)) {
+            if (quantity >= tier.min && quantity <= tier.max) {
+                unitPrice = tier.price;
+                break;
+            }
+        }
+
+        const subtotal = unitPrice * quantity;
+        const deliveryFee = deliveryFees[deliveryCity] || 800;
+        const total = subtotal + deliveryFee;
+
+        document.getElementById('summaryQty').textContent = quantity;
+        document.getElementById('summaryUnitPrice').textContent = unitPrice.toLocaleString();
+        document.getElementById('summarySubtotal').textContent = subtotal.toLocaleString();
+        document.getElementById('summaryDelivery').textContent = deliveryFee.toLocaleString();
+        document.getElementById('summaryTotal').textContent = total.toLocaleString();
+
+        return { quantity, unitPrice, subtotal, deliveryFee, total };
+    }
+
+    document.getElementById('quantity').addEventListener('input', calculatePrice);
+    document.getElementById('deliveryCity').addEventListener('change', calculatePrice);
+
+    // Form submission
+    let currentOrder = null;
+
+    document.getElementById('orderForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const form = document.getElementById('orderForm');
+        const loading = document.getElementById('loadingState');
+        const success = document.getElementById('successState');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Validate files
+        const frontFile = document.getElementById('frontInput').files[0];
+        const backFile = document.getElementById('backInput').files[0];
+
+        if (!frontFile || !backFile) {
+            alert('Please upload both front and back card images');
+            return;
+        }
+
+        // Show loading
+        form.style.display = 'none';
+        loading.style.display = 'block';
+
+        try {
+            const formData = new FormData(this);
+
+            const response = await fetch('/api/orders/create', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                currentOrder = data;
+                document.getElementById('orderNumber').textContent = data.order_number;
+                document.getElementById('paymentLink').href = '/payment/' + data.order_number;
+
+                loading.style.display = 'none';
+                success.style.display = 'block';
+
+                // Auto-redirect to payment page after 2 seconds
+                setTimeout(() => {
+                    window.location.href = '/payment/' + data.order_number;
+                }, 2000);
+            } else {
+                throw new Error(data.error || 'Order creation failed');
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+            loading.style.display = 'none';
+            form.style.display = 'block';
+        }
+    });
+
+    async function payWithMpesa() {
+        if (!currentOrder) return;
+
+        const phone = document.getElementById('phone').value;
+
+        try {
+            const response = await fetch('/api/payments/mpesa/initiate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    order_number: currentOrder.order_number,
+                    phone: phone
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                if (data.mock) {
+                    alert('Payment successful (Test Mode)! Redirecting to order status...');
+                    window.location.href = '/order/' + currentOrder.order_number;
+                } else {
+                    alert('Please check your phone and enter your M-Pesa PIN');
+                    // Poll for payment status
+                    pollPaymentStatus(data.checkout_request_id);
+                }
+            } else {
+                alert('Payment failed: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Payment error: ' + error.message);
+        }
+    }
+
+    async function pollPaymentStatus(checkoutRequestId) {
+        const maxAttempts = 30;
+        let attempts = 0;
+
+        const poll = async () => {
+            attempts++;
+            try {
+                const response = await fetch(`/api/payments/mpesa/status/${checkoutRequestId}`);
+                const data = await response.json();
+
+                if (data.paid) {
+                    alert('Payment successful! Redirecting to order status...');
+                    window.location.href = '/order/' + currentOrder.order_number;
+                } else if (data.status === 'failed') {
+                    alert('Payment failed: ' + data.error);
+                } else if (attempts < maxAttempts) {
+                    setTimeout(poll, 3000);
+                } else {
+                    alert('Payment timeout. Please check your order status.');
+                    window.location.href = '/order/' + currentOrder.order_number;
+                }
+            } catch (error) {
+                console.error('Poll error:', error);
+                if (attempts < maxAttempts) {
+                    setTimeout(poll, 3000);
+                }
+            }
+        };
+
+        setTimeout(poll, 5000);
+    }
+
+    // Initialize
+    calculatePrice();
+</script>
+{% endblock %}

@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Order {{ order_number }}{% endblock %}
+
+{% block content %}
+<section class="order-section" style="background: var(--gray-100); min-height: 100vh; padding: 80px 0;">
+    <div class="container">
+        <div class="order-status">
+            <div class="status-card" id="statusCard">
+                <div class="spinner" id="loading"></div>
+
+                <div id="orderDetails" style="display: none;">
+                    <div class="status-icon" id="statusIcon">📦</div>
+                    <h2 class="status-title" id="statusTitle">Order Status</h2>
+                    <div class="order-number">{{ order_number }}</div>
+                    <p class="status-text" id="statusText">Loading order details...</p>
+
+                    <div class="progress-steps" id="progressSteps">
+                        <div class="progress-step" data-step="pending">
+                            <div class="step-dot">1</div>
+                            <div class="step-label">Order Placed</div>
+                        </div>
+                        <div class="progress-step" data-step="paid">
+                            <div class="step-dot">2</div>
+                            <div class="step-label">Paid</div>
+                        </div>
+                        <div class="progress-step" data-step="printing">
+                            <div class="step-dot">3</div>
+                            <div class="step-label">Printing</div>
+                        </div>
+                        <div class="progress-step" data-step="shipped">
+                            <div class="step-dot">4</div>
+                            <div class="step-label">Shipped</div>
+                        </div>
+                        <div class="progress-step" data-step="delivered">
+                            <div class="step-dot">5</div>
+                            <div class="step-label">Delivered</div>
+                        </div>
+                    </div>
+
+                    <div id="orderInfo" style="text-align: left; margin-top: 40px; padding: 20px; background: var(--gray-100); border-radius: var(--radius-lg);">
+                        <h4 style="margin-bottom: 15px; color: var(--dark);">Order Details</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div style="color: var(--gray-600);">Status:</div>
+                            <div id="infoStatus" style="font-weight: 600;"></div>
+                            <div style="color: var(--gray-600);">Payment:</div>
+                            <div id="infoPayment" style="font-weight: 600;"></div>
+                            <div style="color: var(--gray-600);">Total:</div>
+                            <div id="infoTotal" style="font-weight: 600;"></div>
+                            <div style="color: var(--gray-600);">Delivery:</div>
+                            <div id="infoDelivery" style="font-weight: 600;"></div>
+                        </div>
+                    </div>
+
+                    <div id="actionButtons" style="margin-top: 30px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const orderNumber = '{{ order_number }}';
+    const statusSequence = ['pending', 'paid', 'processing', 'printing', 'printed', 'shipped', 'delivered'];
+
+    const statusConfig = {
+        pending: { icon: '⏳', title: 'Awaiting Payment', text: 'Please complete your payment to proceed' },
+        paid: { icon: '✅', title: 'Payment Received', text: 'Your order is being prepared for printing' },
+        processing: { icon: '⚙️', title: 'Processing', text: 'Your cards are being prepared' },
+        printing: { icon: '🖨️', title: 'Printing', text: 'Your cards are currently being printed' },
+        printed: { icon: '📦', title: 'Printed', text: 'Your cards are ready and being packed for shipping' },
+        shipped: { icon: '🚚', title: 'On the Way', text: 'Your cards are out for delivery' },
+        delivered: { icon: '🎉', title: 'Delivered', text: 'Your cards have been delivered. Enjoy!' },
+        cancelled: { icon: '❌', title: 'Cancelled', text: 'This order has been cancelled' }
+    };
+
+    async function loadOrder() {
+        try {
+            const response = await fetch(`/api/orders/${orderNumber}`);
+            const data = await response.json();
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('orderDetails').style.display = 'block';
+
+            if (data.error) {
+                document.getElementById('statusIcon').textContent = '❓';
+                document.getElementById('statusTitle').textContent = 'Order Not Found';
+                document.getElementById('statusText').textContent = 'We could not find this order. Please check the order number.';
+                return;
+            }
+
+            // Update status display
+            const config = statusConfig[data.status] || statusConfig.pending;
+            document.getElementById('statusIcon').textContent = config.icon;
+            document.getElementById('statusTitle').textContent = config.title;
+            document.getElementById('statusText').textContent = config.text;
+
+            // Update progress steps
+            const currentIndex = statusSequence.indexOf(data.status);
+            document.querySelectorAll('.progress-step').forEach((step, index) => {
+                const stepName = step.dataset.step;
+                const stepIndex = statusSequence.indexOf(stepName);
+
+                if (stepIndex < currentIndex || (data.status === 'delivered' && stepIndex <= currentIndex)) {
+                    step.classList.add('completed');
+                } else if (stepIndex === currentIndex) {
+                    step.classList.add('active');
+                }
+            });
+
+            // Update info
+            document.getElementById('infoStatus').textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+            document.getElementById('infoPayment').textContent = data.payment_status === 'paid' ? 'Paid ✓' : 'Pending';
+            document.getElementById('infoPayment').style.color = data.payment_status === 'paid' ? 'var(--success)' : 'var(--warning)';
+            document.getElementById('infoTotal').textContent = 'KES ' + data.total.toLocaleString();
+            document.getElementById('infoDelivery').textContent = data.delivery_method === 'pickup' ? 'Pickup' : data.delivery_city;
+
+            // Add action buttons
+            const actionsDiv = document.getElementById('actionButtons');
+            actionsDiv.innerHTML = '';
+
+            if (data.payment_status !== 'paid' && data.status === 'pending') {
+                const payBtn = document.createElement('button');
+                payBtn.className = 'btn btn-primary btn-lg';
+                payBtn.textContent = `Pay KES ${data.total.toLocaleString()} via M-Pesa`;
+                payBtn.onclick = () => promptPayment();
+                actionsDiv.appendChild(payBtn);
+            }
+
+            if (data.status !== 'pending') {
+                const downloadBtn = document.createElement('a');
+                downloadBtn.className = 'btn btn-secondary';
+                downloadBtn.href = `/api/orders/${orderNumber}/download`;
+                downloadBtn.textContent = 'Download Card PDF';
+                downloadBtn.style.marginLeft = '10px';
+                actionsDiv.appendChild(downloadBtn);
+            }
+
+        } catch (error) {
+            console.error('Error loading order:', error);
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('orderDetails').style.display = 'block';
+            document.getElementById('statusIcon').textContent = '❌';
+            document.getElementById('statusTitle').textContent = 'Error';
+            document.getElementById('statusText').textContent = 'Failed to load order details. Please try again.';
+        }
+    }
+
+    async function promptPayment() {
+        const phone = prompt('Enter your M-Pesa phone number (e.g., 0712345678):');
+        if (!phone) return;
+
+        try {
+            const response = await fetch('/api/payments/mpesa/initiate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    order_number: orderNumber,
+                    phone: phone
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                if (data.mock) {
+                    alert('Payment successful (Test Mode)!');
+                    loadOrder();
+                } else {
+                    alert('Please check your phone and enter your M-Pesa PIN');
+                    setTimeout(() => loadOrder(), 10000);
+                }
+            } else {
+                alert('Payment failed: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Payment error: ' + error.message);
+        }
+    }
+
+    // Load order on page load
+    loadOrder();
+
+    // Refresh every 30 seconds
+    setInterval(loadOrder, 30000);
+</script>
+{% endblock %}
