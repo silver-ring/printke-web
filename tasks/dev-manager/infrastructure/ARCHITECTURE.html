@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrintKe Platform Architecture</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-600: #4b5563;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--gray-800);
+            background: var(--gray-50);
+        }
+        .container { max-width: 1000px; margin: 0 auto; padding: 40px 20px; }
+        h1 { font-size: 2.5rem; color: var(--gray-900); margin-bottom: 1rem; }
+        h2 { font-size: 1.75rem; color: var(--gray-900); margin: 2rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary); }
+        h3 { font-size: 1.25rem; color: var(--gray-800); margin: 1.5rem 0 0.75rem; }
+        p { margin-bottom: 1rem; color: var(--gray-600); }
+        .card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--gray-200); }
+        th { background: var(--gray-100); font-weight: 600; }
+        code { background: var(--gray-100); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+        pre { background: var(--gray-900); color: #e5e7eb; padding: 16px; border-radius: 8px; overflow-x: auto; margin: 1rem 0; font-family: monospace; font-size: 0.85em; white-space: pre; }
+        ul { margin: 1rem 0 1rem 1.5rem; }
+        li { margin-bottom: 0.5rem; color: var(--gray-600); }
+        .header { text-align: center; margin-bottom: 3rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>PrintKe Platform Architecture</h1>
+            <p>Card Printing Platform with Real-Time Delivery Tracking for Kenya</p>
+        </div>
+
+        <h2>Overview</h2>
+        <div class="card">
+            <p>PrintKe is a card printing platform with real-time delivery tracking for Kenya.</p>
+        </div>
+
+        <h2>Applications</h2>
+        <div class="card">
+            <table>
+                <tr><th>App</th><th>Tech Stack</th><th>Purpose</th></tr>
+                <tr><td>printke-api</td><td>FastAPI (Python)</td><td>Backend microservices</td></tr>
+                <tr><td>printke-web</td><td>Jinja2 + HTMX</td><td>Customer website (orders)</td></tr>
+                <tr><td>printke-admin</td><td>React + Vite</td><td>Admin back office</td></tr>
+                <tr><td>printke-driver</td><td>Expo (React Native)</td><td>Driver mobile app</td></tr>
+            </table>
+        </div>
+
+        <h2>Microservices Architecture</h2>
+        <div class="card">
+<pre>
+                    +------------------+
+                    |   API Gateway    |
+                    |    (Traefik)     |
+                    +--------+---------+
+                             |
+        +--------------------+--------------------+
+        |                    |                    |
+        v                    v                    v
++---------------+  +---------------+  +----------------+
+|  Auth Service |  | Order Service |  |Delivery Service|
+|   (FastAPI)   |  |   (FastAPI)   |  |   (FastAPI)    |
++---------------+  +---------------+  +----------------+
+        |                    |                    |
+        +--------------------+--------------------+
+                             |
+                    +--------+--------+
+                    |                 |
+                    v                 v
+            +-------------+   +-------------+
+            | PostgreSQL  |   |    Redis    |
+            +-------------+   +-------------+
+</pre>
+        </div>
+
+        <h2>Services Breakdown</h2>
+
+        <div class="card">
+            <h3>1. Auth Service</h3>
+            <ul>
+                <li>User registration/login</li>
+                <li>JWT token management</li>
+                <li>Driver authentication</li>
+                <li>Admin authentication</li>
+                <li>Document storage per user</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h3>2. Order Service</h3>
+            <ul>
+                <li>Order creation</li>
+                <li>Order management</li>
+                <li>Pricing calculation</li>
+                <li>PDF generation</li>
+                <li>M-Pesa payment integration</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h3>3. Delivery Service</h3>
+            <ul>
+                <li>Driver management</li>
+                <li>Order assignment to drivers</li>
+                <li>Real-time GPS tracking (WebSocket)</li>
+                <li>Delivery status updates</li>
+                <li>ETA calculation</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h3>4. Notification Service (Future)</h3>
+            <ul>
+                <li>SMS notifications (Africa's Talking)</li>
+                <li>Email notifications</li>
+                <li>Push notifications</li>
+            </ul>
+        </div>
+
+        <h2>Database Schema</h2>
+        <div class="card">
+            <h3>Users Table</h3>
+            <ul>
+                <li>id, email, phone, password_hash</li>
+                <li>role (customer, driver, admin)</li>
+                <li>documents (JSON - stored file references)</li>
+            </ul>
+
+            <h3>Drivers Table</h3>
+            <ul>
+                <li>id, user_id, name, phone, vehicle_type</li>
+                <li>is_active, current_location (lat, lng)</li>
+                <li>last_location_update</li>
+            </ul>
+
+            <h3>Deliveries Table</h3>
+            <ul>
+                <li>id, order_id, driver_id</li>
+                <li>status (assigned, picked_up, in_transit, delivered)</li>
+                <li>pickup_location, delivery_location</li>
+                <li>started_at, delivered_at</li>
+                <li>current_lat, current_lng</li>
+            </ul>
+
+            <h3>Location History Table</h3>
+            <ul>
+                <li>id, delivery_id, lat, lng, timestamp</li>
+            </ul>
+        </div>
+
+        <h2>Tech Decisions</h2>
+        <div class="card">
+            <h3>Why Expo for Driver App?</h3>
+            <ul>
+                <li>JavaScript - AI-friendly development</li>
+                <li>Cross-platform (Android + iOS)</li>
+                <li>Expo Go for instant testing</li>
+                <li>Background location with expo-location</li>
+                <li>Easy to build APK</li>
+            </ul>
+
+            <h3>Why React + Vite for Admin?</h3>
+            <ul>
+                <li>Fast development</li>
+                <li>Rich ecosystem</li>
+                <li>Real-time updates with WebSocket</li>
+                <li>Maps integration (Leaflet)</li>
+            </ul>
+
+            <h3>Why Docker Compose (not K8s)?</h3>
+            <ul>
+                <li>Single server deployment</li>
+                <li>Simpler for small team</li>
+                <li>Easy to scale later to K8s</li>
+                <li>Lower complexity</li>
+            </ul>
+        </div>
+
+        <h2>Deployment</h2>
+        <div class="card">
+<pre>
+# docker-compose.yml structure
+services:
+  traefik:      # API Gateway & Load Balancer
+  api-auth:     # Auth microservice
+  api-orders:   # Orders microservice
+  api-delivery: # Delivery microservice
+  postgres:     # Database
+  redis:        # Cache & Pub/Sub
+  minio:        # Document storage (S3-compatible)
+</pre>
+        </div>
+
+        <h2>GitHub Repositories</h2>
+        <div class="card">
+            <p><strong>Organization:</strong> <code>printke</code></p>
+            <table>
+                <tr><th>Repository</th><th>Description</th></tr>
+                <tr><td>printke-api</td><td>Backend microservices (monorepo)</td></tr>
+                <tr><td>printke-admin</td><td>Admin dashboard (React)</td></tr>
+                <tr><td>printke-driver</td><td>Driver app (Expo)</td></tr>
+                <tr><td>printke-infra</td><td>Docker, K8s configs</td></tr>
+            </table>
+        </div>
+
+        <h2>Development Workflow</h2>
+        <div class="card">
+            <ol>
+                <li>Each service runs independently</li>
+                <li>Shared PostgreSQL database</li>
+                <li>Redis for real-time pub/sub</li>
+                <li>WebSocket for live tracking</li>
+                <li>Docker Compose for local dev</li>
+                <li>GitHub Actions for CI/CD</li>
+            </ol>
+        </div>
+
+        <div style="text-align: center; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--gray-200);">
+            <p style="color: var(--gray-600);">PrintKe Platform Architecture - Updated January 2026</p>
+        </div>
+    </div>
+</body>
+</html>
