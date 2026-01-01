@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: printke
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  - postgres-init.yaml
+  - postgres.yaml
+  - redis.yaml
+  - minio.yaml
+  - api.yaml
+  - admin.yaml
+  - ingress.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: printke-platform
+  app.kubernetes.io/managed-by: kustomize

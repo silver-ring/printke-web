@@ -1,0 +1,16 @@
+{
+  "name": "printke-e2e",
+  "version": "1.0.0",
+  "description": "End-to-end tests for PrintKe Platform",
+  "scripts": {
+    "test": "npx playwright test",
+    "test:headed": "npx playwright test --headed",
+    "report": "npx playwright show-report test-results/html-report"
+  },
+  "keywords": ["e2e", "testing", "playwright"],
+  "author": "silver-ring",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.57.0"
+  }
+}

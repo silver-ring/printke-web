@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: printke
+  labels:
+    app.kubernetes.io/name: printke
+    app.kubernetes.io/part-of: printke-platform

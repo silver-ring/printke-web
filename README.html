@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrintKe Infrastructure Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 2rem;
+            margin: -2rem -2rem 2rem -2rem;
+            border-radius: 0 0 10px 10px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        h2 {
+            color: #667eea;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #667eea;
+        }
+
+        h3 {
+            color: #764ba2;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 1rem;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        pre code {
+            background: none;
+            color: inherit;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: #f9f9f9;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-right: 0.5rem;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .info {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        ul, ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .toc {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 5px;
+            margin-bottom: 2rem;
+        }
+
+        .toc h3 {
+            margin-top: 0;
+        }
+
+        .toc ul {
+            margin-left: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PrintKe Infrastructure</h1>
+            <p class="subtitle">Docker-based infrastructure for PrintKe document printing platform</p>
+            <div style="margin-top: 1rem;">
+                <span class="badge">Docker</span>
+                <span class="badge">FastAPI</span>
+                <span class="badge">PostgreSQL</span>
+                <span class="badge">Redis</span>
+                <span class="badge">MinIO</span>
+                <span class="badge">Traefik</span>
+            </div>
+        </header>
+
+        <div class="toc">
+            <h3>Table of Contents</h3>
+            <ul>
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#architecture">Architecture</a></li>
+                <li><a href="#prerequisites">Prerequisites</a></li>
+                <li><a href="#quick-start">Quick Start</a></li>
+                <li><a href="#services">Services</a></li>
+                <li><a href="#configuration">Configuration</a></li>
+                <li><a href="#management">Management Scripts</a></li>
+                <li><a href="#database">Database Schema</a></li>
+                <li><a href="#security">Security</a></li>
+                <li><a href="#troubleshooting">Troubleshooting</a></li>
+            </ul>
+        </div>
+
+        <h2 id="overview">Overview</h2>
+        <p>PrintKe Infrastructure provides a complete Docker-based setup for the PrintKe document printing platform. It includes all necessary services configured for production deployment.</p>
+
+        <h2 id="architecture">Architecture</h2>
+        <p>The infrastructure consists of the following components:</p>
+        <ul>
+            <li><strong>Traefik</strong> - API Gateway, Reverse Proxy, and SSL/TLS termination</li>
+            <li><strong>PrintKe API</strong> - FastAPI backend application</li>
+            <li><strong>PrintKe Admin</strong> - Nginx-served static frontend</li>
+            <li><strong>PostgreSQL 16</strong> - Primary database</li>
+            <li><strong>Redis 7</strong> - Cache and session storage</li>
+            <li><strong>MinIO</strong> - S3-compatible object storage for documents</li>
+        </ul>
+
+        <h2 id="prerequisites">Prerequisites</h2>
+        <ul>
+            <li>Docker Engine 20.10+</li>
+            <li>Docker Compose 2.0+</li>
+            <li>Linux/Ubuntu server (tested on Ubuntu 22.04)</li>
+            <li>Minimum 2GB RAM, 20GB disk space</li>
+        </ul>
+
+        <h2 id="quick-start">Quick Start</h2>
+
+        <h3>1. Clone or Navigate to Project</h3>
+        <pre><code>cd /home/silverring/projects/printke-infra</code></pre>
+
+        <h3>2. Configure Environment</h3>
+        <pre><code># Copy example environment file
+cp .env.example .env
+
+# Edit environment variables
+nano .env</code></pre>
+
+        <div class="warning">
+            <strong>Important:</strong> Update the following in production:
+            <ul>
+                <li><code>SECRET_KEY</code> - Use a strong random key (min 32 characters)</li>
+                <li><code>JWT_SECRET_KEY</code> - Use a different strong random key</li>
+                <li><code>POSTGRES_PASSWORD</code> - Set a secure password</li>
+                <li><code>REDIS_PASSWORD</code> - Set a secure password</li>
+                <li><code>MINIO_ROOT_PASSWORD</code> - Set a secure password</li>
+                <li><code>DOMAIN</code> - Set your actual domain name</li>
+                <li><code>ACME_EMAIL</code> - Set your email for Let's Encrypt</li>
+            </ul>
+        </div>
+
+        <h3>3. Start Services</h3>
+        <pre><code>./scripts/start.sh</code></pre>
+
+        <div class="success">
+            <strong>Success!</strong> All services should now be running. Access points:
+            <ul>
+                <li>Traefik Dashboard: <a href="http://localhost:8080">http://localhost:8080</a></li>
+                <li>MinIO Console: <a href="http://localhost:9001">http://localhost:9001</a></li>
+                <li>API: <a href="http://localhost/api/health">http://localhost/api/health</a></li>
+                <li>Admin: <a href="http://localhost">http://localhost</a></li>
+            </ul>
+        </div>
+
+        <h2 id="services">Services</h2>
+
+        <h3>Port Mapping</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>Internal Port</th>
+                    <th>External Port</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Traefik HTTP</td>
+                    <td>80</td>
+                    <td>80</td>
+                    <td>HTTP entry point</td>
+                </tr>
+                <tr>
+                    <td>Traefik HTTPS</td>
+                    <td>443</td>
+                    <td>443</td>
+                    <td>HTTPS entry point</td>
+                </tr>
+                <tr>
+                    <td>Traefik Dashboard</td>
+                    <td>8080</td>
+                    <td>8080</td>
+                    <td>Monitoring dashboard</td>
+                </tr>
+                <tr>
+                    <td>PostgreSQL</td>
+                    <td>5432</td>
+                    <td>5436</td>
+                    <td>Database access</td>
+                </tr>
+                <tr>
+                    <td>Redis</td>
+                    <td>6379</td>
+                    <td>6385</td>
+                    <td>Cache access</td>
+                </tr>
+                <tr>
+                    <td>MinIO API</td>
+                    <td>9000</td>
+                    <td>9000</td>
+                    <td>S3 API endpoint</td>
+                </tr>
+                <tr>
+                    <td>MinIO Console</td>
+                    <td>9001</td>
+                    <td>9001</td>
+                    <td>Web UI</td>
+                </tr>
+                <tr>
+                    <td>PrintKe API</td>
+                    <td>8000</td>
+                    <td>-</td>
+                    <td>Internal only (via Traefik)</td>
+                </tr>
+                <tr>
+                    <td>PrintKe Admin</td>
+                    <td>80</td>
+                    <td>-</td>
+                    <td>Internal only (via Traefik)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Service Details</h3>
+
+        <h4>Traefik (API Gateway)</h4>
+        <ul>
+            <li>Automatic service discovery via Docker labels</li>
+            <li>Let's Encrypt SSL certificates (automatic renewal)</li>
+            <li>HTTP to HTTPS redirect</li>
+            <li>Load balancing</li>
+            <li>Dashboard for monitoring</li>
+        </ul>
+
+        <h4>PrintKe API (FastAPI Backend)</h4>
+        <ul>
+            <li>FastAPI framework</li>
+            <li>Automatic API documentation (Swagger UI)</li>
+            <li>Database migrations with Alembic</li>
+            <li>Redis caching</li>
+            <li>S3/MinIO integration for file storage</li>
+        </ul>
+
+        <h4>PostgreSQL Database</h4>
+        <ul>
+            <li>PostgreSQL 16 Alpine</li>
+            <li>Automatic initialization with schema</li>
+            <li>Health checks enabled</li>
+            <li>Persistent volume storage</li>
+        </ul>
+
+        <h4>Redis Cache</h4>
+        <ul>
+            <li>Redis 7 Alpine</li>
+            <li>Password protected</li>
+            <li>AOF persistence enabled</li>
+            <li>Health checks enabled</li>
+        </ul>
+
+        <h4>MinIO Object Storage</h4>
+        <ul>
+            <li>S3-compatible API</li>
+            <li>Web console for management</li>
+            <li>Bucket for document storage</li>
+            <li>Health checks enabled</li>
+        </ul>
+
+        <h2 id="configuration">Configuration</h2>
+
+        <h3>Environment Variables</h3>
+        <p>All configuration is managed through the <code>.env</code> file. Key variables include:</p>
+
+        <h4>Domain Configuration</h4>
+        <pre><code>DOMAIN=localhost              # Your domain name
+ACME_EMAIL=admin@printke.com  # Email for Let's Encrypt</code></pre>
+
+        <h4>Database Configuration</h4>
+        <pre><code>POSTGRES_DB=printke           # Database name
+POSTGRES_USER=printke         # Database user
+POSTGRES_PASSWORD=printke123  # Database password</code></pre>
+
+        <h4>API Configuration</h4>
+        <pre><code>SECRET_KEY=your-secret-key-min-32-chars
+CORS_ORIGINS=http://localhost:3000
+API_DEBUG=false</code></pre>
+
+        <h3>Traefik Configuration</h3>
+        <p>Traefik is configured via:</p>
+        <ul>
+            <li><code>traefik/traefik.yml</code> - Main configuration</li>
+            <li><code>traefik/dynamic/middlewares.yml</code> - Middleware definitions</li>
+            <li>Docker labels in <code>docker-compose.yml</code></li>
+        </ul>
+
+        <h2 id="management">Management Scripts</h2>
+
+        <h3>Start Services</h3>
+        <pre><code>./scripts/start.sh</code></pre>
+        <p>Starts all services and displays status and access URLs.</p>
+
+        <h3>Stop Services</h3>
+        <pre><code>./scripts/stop.sh</code></pre>
+        <p>Stops all running services (data is preserved in volumes).</p>
+
+        <h3>View Logs</h3>
+        <pre><code># View all logs
+./scripts/logs.sh
+
+# Follow specific service logs
+./scripts/logs.sh printke-api -f
+
+# Show last 50 lines from postgres
+./scripts/logs.sh postgres --tail 50</code></pre>
+
+        <h3>Backup Database</h3>
+        <pre><code>./scripts/backup-db.sh</code></pre>
+        <p>Creates a compressed SQL backup in the <code>backups/</code> directory. Automatically keeps the last 7 backups.</p>
+
+        <h3>Restore Database</h3>
+        <pre><code>./scripts/restore-db.sh backups/printke_db_backup_20240101_120000.sql.gz</code></pre>
+        <p>Restores database from a backup file.</p>
+
+        <h2 id="database">Database Schema</h2>
+
+        <h3>Tables</h3>
+        <ul>
+            <li><strong>users</strong> - User accounts (customers and shop owners)</li>
+            <li><strong>shops</strong> - Print shops</li>
+            <li><strong>documents</strong> - Uploaded documents with S3 references</li>
+            <li><strong>orders</strong> - Print orders</li>
+            <li><strong>payments</strong> - Payment transactions</li>
+            <li><strong>reviews</strong> - Shop reviews and ratings</li>
+            <li><strong>notifications</strong> - User notifications</li>
+        </ul>
+
+        <h3>Schema Features</h3>
+        <ul>
+            <li>UUID primary keys</li>
+            <li>Automatic timestamps (created_at, updated_at)</li>
+            <li>Indexes for performance optimization</li>
+            <li>Foreign key constraints</li>
+            <li>Trigger-based updated_at automation</li>
+        </ul>
+
+        <h3>Direct Database Access</h3>
+        <pre><code># Connect to PostgreSQL
+docker exec -it printke-postgres psql -U printke -d printke
+
+# Or from host (if psql installed)
+psql -h localhost -p 5436 -U printke -d printke</code></pre>
+
+        <h2 id="security">Security</h2>
+
+        <h3>Production Checklist</h3>
+        <div class="warning">
+            <strong>Before deploying to production:</strong>
+            <ul>
+                <li>Change all default passwords in <code>.env</code></li>
+                <li>Generate strong random keys for SECRET_KEY and JWT_SECRET_KEY</li>
+                <li>Set up firewall rules (UFW recommended)</li>
+                <li>Configure SSL certificates (Let's Encrypt via Traefik)</li>
+                <li>Restrict Traefik dashboard access (currently insecure mode)</li>
+                <li>Review and update CORS_ORIGINS</li>
+                <li>Enable rate limiting in Traefik</li>
+                <li>Set up monitoring and alerting</li>
+                <li>Configure backup automation</li>
+            </ul>
+        </div>
+
+        <h3>Network Security</h3>
+        <p>The infrastructure uses an internal Docker network (<code>printke-network</code>). Only Traefik exposes ports 80, 443, and 8080 to the host.</p>
+
+        <h3>Container Security</h3>
+        <ul>
+            <li>Non-root users in containers</li>
+            <li>Read-only file system mounts where applicable</li>
+            <li>Health checks for all services</li>
+            <li>Resource limits (can be added to docker-compose.yml)</li>
+        </ul>
+
+        <h2 id="troubleshooting">Troubleshooting</h2>
+
+        <h3>Services Won't Start</h3>
+        <pre><code># Check if .env file exists
+ls -la .env
+
+# Check Docker status
+docker ps -a
+
+# View service logs
+./scripts/logs.sh</code></pre>
+
+        <h3>Port Conflicts</h3>
+        <p>If you see port binding errors, another service may be using the ports. Check with:</p>
+        <pre><code>sudo netstat -tlnp | grep -E '80|443|5436|6385|9000|9001'</code></pre>
+        <p>Update the port mappings in <code>docker-compose.yml</code> if needed.</p>
+
+        <h3>Database Connection Issues</h3>
+        <pre><code># Check if PostgreSQL is healthy
+docker exec printke-postgres pg_isready -U printke
+
+# View PostgreSQL logs
+./scripts/logs.sh postgres</code></pre>
+
+        <h3>API Not Responding</h3>
+        <pre><code># Check API health
+curl http://localhost/api/health
+
+# View API logs
+./scripts/logs.sh printke-api -f
+
+# Restart API service
+docker-compose restart printke-api</code></pre>
+
+        <h3>MinIO Access Issues</h3>
+        <pre><code># Check MinIO health
+curl http://localhost:9000/minio/health/live
+
+# Access MinIO console
+# URL: http://localhost:9001
+# Username: minioadmin (or value from MINIO_ROOT_USER)
+# Password: minioadmin123 (or value from MINIO_ROOT_PASSWORD)</code></pre>
+
+        <h3>Clearing Everything</h3>
+        <div class="warning">
+            <strong>Warning:</strong> This will delete all data!
+        </div>
+        <pre><code># Stop services and remove volumes
+docker-compose down -v
+
+# Remove all containers, networks, and volumes
+docker system prune -a --volumes</code></pre>
+
+        <h2>Development Workflow</h2>
+
+        <h3>API Development</h3>
+        <p>The API code is mounted from <code>/home/silverring/projects/printke/backend</code> (to be created). During development:</p>
+        <ol>
+            <li>Edit code on your local machine</li>
+            <li>API auto-reloads on changes (if API_DEBUG=true)</li>
+            <li>Access docs at <code>http://localhost/api/docs</code></li>
+        </ol>
+
+        <h3>Admin Development</h3>
+        <p>For the admin frontend, develop locally and build for production:</p>
+        <pre><code># Build admin Docker image
+cd admin
+docker build -t printke-admin .
+
+# Or rebuild entire stack
+docker-compose build</code></pre>
+
+        <h2>Monitoring</h2>
+
+        <h3>Traefik Dashboard</h3>
+        <p>Access the Traefik dashboard at <a href="http://localhost:8080">http://localhost:8080</a> to monitor:</p>
+        <ul>
+            <li>Active routers and services</li>
+            <li>SSL certificate status</li>
+            <li>Request metrics</li>
+            <li>Health check status</li>
+        </ul>
+
+        <h3>Container Health</h3>
+        <pre><code># Check all container statuses
+docker-compose ps
+
+# Check specific service health
+docker inspect printke-api | grep -A 10 Health</code></pre>
+
+        <h2>Additional Resources</h2>
+        <ul>
+            <li><a href="https://doc.traefik.io/traefik/">Traefik Documentation</a></li>
+            <li><a href="https://fastapi.tiangolo.com/">FastAPI Documentation</a></li>
+            <li><a href="https://www.postgresql.org/docs/">PostgreSQL Documentation</a></li>
+            <li><a href="https://redis.io/documentation">Redis Documentation</a></li>
+            <li><a href="https://min.io/docs/minio/linux/index.html">MinIO Documentation</a></li>
+        </ul>
+
+        <footer style="margin-top: 3rem; padding-top: 2rem; border-top: 2px solid #ddd; text-align: center; color: #666;">
+            <p>PrintKe Infrastructure v1.0.0</p>
+            <p>Built with Docker, FastAPI, PostgreSQL, Redis, MinIO, and Traefik</p>
+        </footer>
+    </div>
+</body>
+</html>

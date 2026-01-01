@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Tracking API - Quick Reference</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 8px;
+        }
+
+        .endpoint-card {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 5px solid #667eea;
+        }
+
+        .method {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: white;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }
+
+        .method.get { background: #28a745; }
+        .method.post { background: #007bff; }
+        .method.put { background: #ffc107; color: #333; }
+        .method.delete { background: #dc3545; }
+        .method.ws { background: #6f42c1; }
+
+        .path {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            margin: 12px 0;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .description {
+            color: #666;
+            margin: 12px 0;
+        }
+
+        .request-body, .response {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .request-body h4, .response h4 {
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        code {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .auth-badge {
+            display: inline-block;
+            background: #ffc107;
+            color: #333;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .param-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .param-table th, .param-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .param-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .param-table code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #d63384;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .endpoint-card {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Delivery Tracking API Reference</h1>
+            <p>Quick reference guide for all delivery tracking endpoints</p>
+        </div>
+
+        <!-- DRIVER ENDPOINTS -->
+        <div class="section">
+            <h2>Driver Endpoints</h2>
+            <p>Base URL: <code>http://localhost:8000/api/drivers</code></p>
+
+            <div class="endpoint-card">
+                <span class="method post">POST</span>
+                <div class="path">/api/drivers/login</div>
+                <div class="description">Authenticate a driver and receive JWT token</div>
+
+                <div class="request-body">
+                    <h4>Request Body:</h4>
+                    <pre><code>{
+  "phone": "+254712345678",
+  "password": "driver123"
+}</code></pre>
+                </div>
+
+                <div class="response">
+                    <h4>Response (200 OK):</h4>
+                    <pre><code>{
+  "access_token": "eyJhbGc...",
+  "token_type": "bearer",
+  "driver": {
+    "id": 1,
+    "name": "John Doe",
+    "phone": "+254712345678",
+    "vehicle_type": "Motorcycle",
+    "vehicle_plate": "KAA 123X",
+    "is_active": true
+  }
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="endpoint-card">
+                <span class="method get">GET</span>
+                <span class="auth-badge">Auth Required</span>
+                <div class="path">/api/drivers/me</div>
+                <div class="description">Get current authenticated driver information</div>
+
+                <div class="response">
+                    <h4>Response (200 OK):</h4>
+                    <pre><code>{
+  "id": 1,
+  "name": "John Doe",
+  "phone": "+254712345678",
+  "vehicle_type": "Motorcycle",
+  "vehicle_plate": "KAA 123X",
+  "is_active": true,
+  "current_lat": -1.2921,
+  "current_lng": 36.8219,
+  "last_location_update": "2026-01-01T12:00:00"
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="endpoint-card">
+                <span class="method get">GET</span>
+                <span class="auth-badge">Auth Required</span>
+                <div class="path">/api/drivers/deliveries</div>
+                <div class="description">Get driver's assigned deliveries (assigned & in_transit only)</div>
+
+                <div class="response">
+                    <h4>Response (200 OK):</h4>
+                    <pre><code>[
+  {
+    "id": 1,
+    "order_id": 123,
+    "driver_id": 1,
+    "status": "assigned",
+    "delivery_address": "123 Test St, Nairobi",
+    "delivery_lat": -1.2921,
+    "delivery_lng": 36.8219,
+    "assigned_at": "2026-01-01T10:00:00",
+    "started_at": null,
+    "delivered_at": null
+  }
+]</code></pre>
+                </div>
+            </div>
+
+            <div class="endpoint-card">
+                <span class="method post">POST</span>
+                <span class="auth-badge">Auth Required</span>
+                <div class="path">/api/drivers/deliveries/{delivery_id}/start</div>
+                <div class="description">Start a delivery (marks as in_transit)</div>
+
+                <div class="response">
+                    <h4>Response (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "delivery_id": 1,
+  "status": "in_transit",
+  "started_at": "2026-01-01T12:00:00"
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="endpoint-card">
+                <span class="method post">POST</span>
+                <span class="auth-badge">Auth Required</span>
+                <div class="path">/api/drivers/deliveries/{delivery_id}/location</div>
+                <div class="description">Update GPS location during delivery</div>
+
+                <div class="request-body">
+                    <h4>Request Body:</h4>
+                    <pre><code>{
+  "lat": -1.2921,
+  "lng": 36.8219,
+  "accuracy": 10.0,    // optional
+  "speed": 30.0        // optional (km/h)
+}</code></pre>
+                </div>
+
+                <div class="response">
+                    <h4>Response (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "delivery_id": 1,
+  "location": {
+    "lat": -1.2921,
+    "lng": 36.8219,
+    "timestamp": "2026-01-01T12:05:00"
+  }
+}</code></pre>
+                </div>
+
+                <div class="info-box">
+                    <strong>Note:</strong> This endpoint also broadcasts location updates via WebSocket to all connected clients watching this delivery.
+                </div>
+            </div>
+
+            <div class="endpoint-card">
+                <span class="method post">POST</span>
+                <span class="auth-badge">Auth Required</span>
+                <div class="path">/api/drivers/deliveries/{delivery_id}/complete</div>
+                <div class="description">Complete a delivery (marks as delivered)</div>
+
+                <div class="request-body">
+                    <h4>Request Body:</h4>
+                    <pre><code>{
+  "notes": "Package delivered to customer",     // optional
+  "delivery_proof_photo": "path/to/photo.jpg",  // optional
+  "signature": "base64_signature_data"          // optional
+}</code></pre>
+                </div>
+
+                <div class="response">
+                    <h4>Response (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "delivery_id": 1,
+  "order_number": "PK-251231-5067",
+  "status": "delivered",
+  "delivered_at": "2026-01-01T13:00:00"
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="endpoint-card">
+                <span class="method get">GET</span>
+                <span class="auth-badge">Auth Required</span>
+                <div class="path">/api/drivers/deliveries/{delivery_id}</div>
+                <div class="description">Get detailed delivery information including order details</div>
+
+                <div class="response">
+                    <h4>Response (200 OK):</h4>
+                    <pre><code>{
+  "delivery": {
+    "id": 1,
+    "status": "in_transit",
+    "pickup_address": "PrintKe Office, Nairobi",
+    "delivery_address": "123 Test St, Nairobi",
+    "delivery_lat": -1.2921,
+    "delivery_lng": 36.8219,
+    "assigned_at": "2026-01-01T10:00:00",
+    "started_at": "2026-01-01T12:00:00",
+    "delivered_at": null,
+    "notes": null
+  },
+  "order": {
+    "order_number": "PK-251231-5067",
+    "customer_name": "Jane Wanjiru",
+    "customer_phone": "+254700000001",
+    "total": 4300.0,
+    "delivery_notes": "Call on arrival"
+  }
+}</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMIN ENDPOINTS -->
+        <div class="section">
+            <h2>Admin Endpoints</h2>
+            <p>Base URL: <code>http://localhost:8000/api/admin</code></p>
+            <div class="warning-box">
+                <strong>⚠ Admin Authentication Required</strong> - All endpoints require admin JWT token in Authorization header
+            </div>
+
+            <div class="endpoint-card">
+                <span class="method get">GET</span>
+                <span class="auth-badge">Admin Required</span>
+                <div class="path">/api/admin/drivers</div>
+                <div class="description">List all drivers</div>
+
+                <div class="response">
+                    <h4>Response (200 OK):</h4>
+                    <pre><code>{
+  "drivers": [
+    {
+      "id": 1,
+      "name": "John Doe",
+      "phone": "+254712345678",
+      "vehicle_type": "Motorcycle",
+      "vehicle_plate": "KAA 123X",
+      "is_active": true,
+      "current_lat": -1.2921,
+      "current_lng": 36.8219,
+      "last_location_update": "2026-01-01T12:00:00"
+    }
+  ],
+  "total": 1
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="endpoint-card">
+                <span class="method post">POST</span>
+                <span class="auth-badge">Admin Required</span>
+                <div class="path">/api/admin/drivers</div>
+                <div class="description">Create a new driver</div>
+
+                <div class="request-body">
+                    <h4>Request Body:</h4>
+                    <pre><code>{
+  "name": "John Doe",
+  "phone": "+254712345678",
+  "password": "driver123",
+  "vehicle_type": "Motorcycle",    // optional
+  "vehicle_plate": "KAA 123X",     // optional
+  "user_id": null                  // optional - link to user account
+}</code></pre>
+                </div>
+
+                <div class="response">
+                    <h4>Response (200 OK):</h4>
+                    <pre><code>{
+  "id": 1,
+  "name": "John Doe",
+  "phone": "+254712345678",
+  "vehicle_type": "Motorcycle",
+  "vehicle_plate": "KAA 123X",
+  "is_active": true
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="endpoint-card">
+                <span class="method get">GET</span>
+                <span class="auth-badge">Admin Required</span>
+                <div class="path">/api/admin/drivers/{driver_id}</div>
+                <div class="description">Get specific driver details</div>
+            </div>
+
+            <div class="endpoint-card">
+                <span class="method put">PUT</span>
+                <span class="auth-badge">Admin Required</span>
+                <div class="path">/api/admin/drivers/{driver_id}</div>
+                <div class="description">Update driver information</div>
+
+                <div class="request-body">
+                    <h4>Request Body (all fields optional):</h4>
+                    <pre><code>{
+  "name": "John Doe Updated",
+  "phone": "+254712345679",
+  "password": "newpassword",
+  "vehicle_type": "Van",
+  "vehicle_plate": "KBB 456Y",
+  "is_active": true
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="endpoint-card">
+                <span class="method delete">DELETE</span>
+                <span class="auth-badge">Admin Required</span>
+                <div class="path">/api/admin/drivers/{driver_id}</div>
+                <div class="description">Delete a driver</div>
+
+                <div class="warning-box">
+                    <strong>⚠ Warning:</strong> Cannot delete drivers with active deliveries. Complete or reassign deliveries first.
+                </div>
+
+                <div class="response">
+                    <h4>Response (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "message": "Driver deleted"
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="endpoint-card">
+                <span class="method post">POST</span>
+                <span class="auth-badge">Admin Required</span>
+                <div class="path">/api/admin/orders/{order_number}/assign</div>
+                <div class="description">Assign an order to a driver for delivery</div>
+
+                <div class="request-body">
+                    <h4>Request Body:</h4>
+                    <pre><code>{
+  "driver_id": 1
+}</code></pre>
+                </div>
+
+                <div class="response">
+                    <h4>Response (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "delivery_id": 1,
+  "order_number": "PK-251231-5067",
+  "driver_name": "John Doe",
+  "status": "assigned"
+}</code></pre>
+                </div>
+
+                <div class="info-box">
+                    <strong>Note:</strong> Order status must be "paid", "processing", "printed", or "shipped" to assign delivery. Order will be automatically marked as "shipped" if not already.
+                </div>
+            </div>
+
+            <div class="endpoint-card">
+                <span class="method get">GET</span>
+                <span class="auth-badge">Admin Required</span>
+                <div class="path">/api/admin/deliveries/active</div>
+                <div class="description">Get all active deliveries with real-time driver locations</div>
+
+                <div class="response">
+                    <h4>Response (200 OK):</h4>
+                    <pre><code>{
+  "deliveries": [
+    {
+      "id": 1,
+      "order_number": "PK-251231-5067",
+      "customer_name": "Jane Wanjiru",
+      "customer_phone": "+254700000001",
+      "delivery_address": "123 Test St, Nairobi",
+      "delivery_city": "Nairobi",
+      "driver_name": "John Doe",
+      "driver_phone": "+254712345678",
+      "driver_vehicle": "Motorcycle - KAA 123X",
+      "current_lat": -1.2921,
+      "current_lng": 36.8219,
+      "delivery_lat": -1.2950,
+      "delivery_lng": 36.8250,
+      "status": "in_transit",
+      "assigned_at": "2026-01-01T10:00:00",
+      "started_at": "2026-01-01T12:00:00",
+      "last_location_update": "2026-01-01T12:30:00"
+    }
+  ],
+  "total": 1
+}</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- WEBSOCKET -->
+        <div class="section">
+            <h2>WebSocket Endpoint</h2>
+
+            <div class="endpoint-card">
+                <span class="method ws">WS</span>
+                <div class="path">ws://localhost:8000/api/ws/deliveries</div>
+                <div class="description">Real-time delivery tracking via WebSocket</div>
+
+                <h4>Query Parameters:</h4>
+                <table class="param-table">
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Type</th>
+                            <th>Required</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>order_number</code></td>
+                            <td>string</td>
+                            <td>No</td>
+                            <td>Specific order to track (customer view). If omitted, receives all updates (admin view)</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h4>Connection Examples:</h4>
+                <pre><code>// Customer tracking specific order
+ws://localhost:8000/api/ws/deliveries?order_number=PK-251231-5067
+
+// Admin dashboard (all deliveries)
+ws://localhost:8000/api/ws/deliveries</code></pre>
+
+                <h4>Message Types Received:</h4>
+
+                <div class="request-body">
+                    <h4>1. Connection Confirmation</h4>
+                    <pre><code>{
+  "type": "connected",
+  "order_number": "PK-251231-5067",  // or null for admin
+  "timestamp": "2026-01-01T12:00:00"
+}</code></pre>
+                </div>
+
+                <div class="request-body">
+                    <h4>2. Current Status (sent immediately if delivery exists)</h4>
+                    <pre><code>{
+  "type": "current_status",
+  "delivery_id": 1,
+  "order_number": "PK-251231-5067",
+  "status": "in_transit",
+  "assigned_at": "2026-01-01T10:00:00",
+  "started_at": "2026-01-01T12:00:00",
+  "delivered_at": null,
+  "driver": {
+    "name": "John Doe",
+    "phone": "+254712345678",
+    "vehicle": "Motorcycle",
+    "current_lat": -1.2921,
+    "current_lng": 36.8219,
+    "last_update": "2026-01-01T12:30:00"
+  }
+}</code></pre>
+                </div>
+
+                <div class="request-body">
+                    <h4>3. Location Update (sent when driver updates location)</h4>
+                    <pre><code>{
+  "type": "location_update",
+  "delivery_id": 1,
+  "order_number": "PK-251231-5067",
+  "lat": -1.2921,
+  "lng": 36.8219,
+  "driver_name": "John Doe",
+  "timestamp": "2026-01-01T12:35:00"
+}</code></pre>
+                </div>
+
+                <div class="request-body">
+                    <h4>4. Status Update (sent when delivery status changes)</h4>
+                    <pre><code>{
+  "type": "status_update",
+  "delivery_id": 1,
+  "order_number": "PK-251231-5067",
+  "status": "delivered",
+  "driver_name": "John Doe",
+  "timestamp": "2026-01-01T13:00:00"
+}</code></pre>
+                </div>
+
+                <div class="request-body">
+                    <h4>5. Pong (response to client ping)</h4>
+                    <pre><code>{
+  "type": "pong",
+  "timestamp": "2026-01-01T12:40:00"
+}</code></pre>
+                </div>
+
+                <h4>JavaScript Example:</h4>
+                <pre><code>const ws = new WebSocket('ws://localhost:8000/api/ws/deliveries?order_number=PK-251231-5067');
+
+ws.onopen = () => {
+    console.log('Connected to delivery tracking');
+};
+
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    switch(data.type) {
+        case 'connected':
+            console.log('Connection confirmed');
+            break;
+
+        case 'current_status':
+            console.log('Current delivery status:', data.status);
+            if (data.driver) {
+                updateMap(data.driver.current_lat, data.driver.current_lng);
+            }
+            break;
+
+        case 'location_update':
+            console.log('Driver moved to:', data.lat, data.lng);
+            updateMap(data.lat, data.lng);
+            break;
+
+        case 'status_update':
+            console.log('Delivery status changed to:', data.status);
+            updateUI(data.status);
+            break;
+    }
+};
+
+// Keep connection alive
+setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) {
+        ws.send('ping');
+    }
+}, 30000);  // Every 30 seconds</code></pre>
+            </div>
+        </div>
+
+        <!-- AUTHENTICATION -->
+        <div class="section">
+            <h2>Authentication</h2>
+
+            <div class="endpoint-card">
+                <h4>Driver Authentication</h4>
+                <p>Use driver login endpoint to get JWT token:</p>
+                <pre><code>POST /api/drivers/login
+{
+  "phone": "+254712345678",
+  "password": "driver123"
+}</code></pre>
+
+                <p style="margin-top: 15px;">Then include token in all subsequent requests:</p>
+                <pre><code>Authorization: Bearer eyJhbGciOiJIUzI1NiIs...</code></pre>
+            </div>
+
+            <div class="endpoint-card">
+                <h4>Admin Authentication</h4>
+                <p>Use existing admin login endpoint:</p>
+                <pre><code>POST /api/admin/login
+{
+  "email": "admin@printke.co.ke",
+  "password": "admin123"
+}</code></pre>
+
+                <p style="margin-top: 15px;">Token format same as driver authentication</p>
+            </div>
+        </div>
+
+        <!-- ERROR CODES -->
+        <div class="section">
+            <h2>Common Error Codes</h2>
+
+            <div class="endpoint-card">
+                <table class="param-table">
+                    <thead>
+                        <tr>
+                            <th>Status Code</th>
+                            <th>Meaning</th>
+                            <th>Common Causes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>200</code></td>
+                            <td>Success</td>
+                            <td>Request completed successfully</td>
+                        </tr>
+                        <tr>
+                            <td><code>400</code></td>
+                            <td>Bad Request</td>
+                            <td>Invalid data, duplicate phone, driver with active deliveries</td>
+                        </tr>
+                        <tr>
+                            <td><code>401</code></td>
+                            <td>Unauthorized</td>
+                            <td>Invalid credentials, missing token, expired token</td>
+                        </tr>
+                        <tr>
+                            <td><code>403</code></td>
+                            <td>Forbidden</td>
+                            <td>Not admin, inactive driver/user, wrong driver for delivery</td>
+                        </tr>
+                        <tr>
+                            <td><code>404</code></td>
+                            <td>Not Found</td>
+                            <td>Driver/delivery/order not found</td>
+                        </tr>
+                        <tr>
+                            <td><code>422</code></td>
+                            <td>Validation Error</td>
+                            <td>Invalid request format, missing required fields</td>
+                        </tr>
+                        <tr>
+                            <td><code>500</code></td>
+                            <td>Server Error</td>
+                            <td>Database error, unexpected exception</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

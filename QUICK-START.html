@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrintKe Infrastructure - Quick Start Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            margin: -2rem -2rem 2rem -2rem;
+            border-radius: 10px 10px 0 0;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        h2 {
+            color: #667eea;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #667eea;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 1rem;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        pre code {
+            background: none;
+            color: inherit;
+            padding: 0;
+        }
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        .info {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        tr:hover {
+            background: #f9f9f9;
+        }
+        ol, ul {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+        li {
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PrintKe Infrastructure</h1>
+            <p>Quick Start Guide - Get up and running in 5 minutes</p>
+        </header>
+
+        <div class="success">
+            <strong>Status:</strong> All services are configured and tested successfully on Ubuntu Server (192.168.2.2)
+        </div>
+
+        <h2>Services Overview</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>Port</th>
+                    <th>Access URL</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Traefik Dashboard</td>
+                    <td>8080</td>
+                    <td>http://192.168.2.2:8080</td>
+                    <td>✓ Running</td>
+                </tr>
+                <tr>
+                    <td>MinIO Console</td>
+                    <td>9001</td>
+                    <td>http://192.168.2.2:9001</td>
+                    <td>✓ Running</td>
+                </tr>
+                <tr>
+                    <td>MinIO API (S3)</td>
+                    <td>9000</td>
+                    <td>http://192.168.2.2:9000</td>
+                    <td>✓ Running</td>
+                </tr>
+                <tr>
+                    <td>PostgreSQL</td>
+                    <td>5437</td>
+                    <td>192.168.2.2:5437</td>
+                    <td>✓ Running</td>
+                </tr>
+                <tr>
+                    <td>Redis</td>
+                    <td>6387</td>
+                    <td>192.168.2.2:6387</td>
+                    <td>✓ Running</td>
+                </tr>
+                <tr>
+                    <td>API (via Traefik)</td>
+                    <td>80/443</td>
+                    <td>http://192.168.2.2/api/</td>
+                    <td>✓ Running</td>
+                </tr>
+                <tr>
+                    <td>Admin Dashboard</td>
+                    <td>80/443</td>
+                    <td>http://192.168.2.2/</td>
+                    <td>✓ Running</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Quick Start Commands</h2>
+
+        <h3>1. Start All Services</h3>
+        <pre><code>cd /home/silverring/projects/printke-infra
+./scripts/start.sh</code></pre>
+
+        <h3>2. Stop All Services</h3>
+        <pre><code>./scripts/stop.sh</code></pre>
+
+        <h3>3. View Logs</h3>
+        <pre><code># All services
+./scripts/logs.sh
+
+# Specific service
+./scripts/logs.sh printke-api -f
+
+# Last 50 lines
+./scripts/logs.sh postgres --tail 50</code></pre>
+
+        <h3>4. Check Service Status</h3>
+        <pre><code>docker compose ps</code></pre>
+
+        <h3>5. Backup Database</h3>
+        <pre><code>./scripts/backup-db.sh</code></pre>
+
+        <h3>6. Restore Database</h3>
+        <pre><code>./scripts/restore-db.sh backups/printke_db_backup_YYYYMMDD_HHMMSS.sql.gz</code></pre>
+
+        <h2>Default Credentials</h2>
+
+        <div class="warning">
+            <strong>Security Warning:</strong> Change these credentials in production!
+        </div>
+
+        <h3>PostgreSQL</h3>
+        <pre><code>Host: 192.168.2.2
+Port: 5437
+Database: printke
+Username: printke
+Password: printke123
+
+Connection String:
+postgresql://printke:printke123@192.168.2.2:5437/printke</code></pre>
+
+        <h3>Redis</h3>
+        <pre><code>Host: 192.168.2.2
+Port: 6387
+Password: redis123
+
+Connection String:
+redis://:redis123@192.168.2.2:6387/0</code></pre>
+
+        <h3>MinIO</h3>
+        <pre><code>Console: http://192.168.2.2:9001
+Username: minioadmin
+Password: minioadmin123
+
+S3 Endpoint: http://192.168.2.2:9000
+Access Key: minioadmin
+Secret Key: minioadmin123</code></pre>
+
+        <h2>Testing the Setup</h2>
+
+        <h3>Test API Health</h3>
+        <pre><code>curl http://192.168.2.2/api/health</code></pre>
+
+        <div class="success">
+            Expected response:
+            <pre><code>{"status":"healthy","service":"printke-api","version":"1.0.0"}</code></pre>
+        </div>
+
+        <h3>Test Database Connection</h3>
+        <pre><code>docker exec printke-postgres pg_isready -U printke</code></pre>
+
+        <h3>Test Redis Connection</h3>
+        <pre><code>docker exec printke-redis redis-cli -a redis123 ping</code></pre>
+
+        <h2>Using Makefile (Alternative)</h2>
+        <pre><code>make start    # Start all services
+make stop     # Stop all services
+make logs     # View logs
+make ps       # Show status
+make backup   # Backup database
+make test     # Run tests</code></pre>
+
+        <h2>Development Workflow</h2>
+
+        <ol>
+            <li><strong>Start Services:</strong> Run <code>./scripts/start.sh</code></li>
+            <li><strong>Develop Your Application:</strong>
+                <ul>
+                    <li>API code goes in <code>/home/silverring/projects/printke/backend</code></li>
+                    <li>Admin frontend goes in <code>/home/silverring/projects/printke-admin</code></li>
+                </ul>
+            </li>
+            <li><strong>Connect to Services:</strong>
+                <ul>
+                    <li>Database: <code>192.168.2.2:5437</code></li>
+                    <li>Redis: <code>192.168.2.2:6387</code></li>
+                    <li>S3/MinIO: <code>192.168.2.2:9000</code></li>
+                </ul>
+            </li>
+            <li><strong>Monitor:</strong> Check Traefik dashboard at <code>http://192.168.2.2:8080</code></li>
+        </ol>
+
+        <h2>Troubleshooting</h2>
+
+        <h3>Services Won't Start</h3>
+        <pre><code># Check if ports are available
+sudo ss -tlnp | grep -E '80|443|5437|6387|9000|9001'
+
+# View service logs
+./scripts/logs.sh
+
+# Restart services
+./scripts/stop.sh && ./scripts/start.sh</code></pre>
+
+        <h3>Port Conflicts</h3>
+        <div class="info">
+            <strong>Note:</strong> Ports 5437 and 6387 were chosen to avoid conflicts with existing services on the server that use 5436 and 6385.
+        </div>
+
+        <h3>Clear Everything and Restart</h3>
+        <div class="warning">
+            <strong>Warning:</strong> This will delete all data!
+        </div>
+        <pre><code>docker compose down -v
+./scripts/start.sh</code></pre>
+
+        <h2>Next Steps</h2>
+
+        <ol>
+            <li>Review and update environment variables in <code>.env</code> file</li>
+            <li>Set up SSL certificates (Let's Encrypt via Traefik)</li>
+            <li>Configure domain names in <code>.env</code> (<code>DOMAIN=your-domain.com</code>)</li>
+            <li>Develop your PrintKe API application</li>
+            <li>Build your Admin dashboard frontend</li>
+            <li>Set up automated backups (cron job for <code>backup-db.sh</code>)</li>
+            <li>Configure monitoring and alerting</li>
+        </ol>
+
+        <h2>Additional Resources</h2>
+        <ul>
+            <li><a href="README.html">Full Documentation (README.html)</a></li>
+            <li>Project Directory: <code>/home/silverring/projects/printke-infra</code></li>
+            <li>Logs Directory: Use <code>./scripts/logs.sh</code></li>
+            <li>Backups Directory: <code>/home/silverring/projects/printke-infra/backups</code></li>
+        </ul>
+
+        <footer style="margin-top: 3rem; padding-top: 2rem; border-top: 2px solid #ddd; text-align: center; color: #666;">
+            <p>PrintKe Infrastructure v1.0.0 | Built with Docker Compose</p>
+            <p>Server: 192.168.2.2 | Last Updated: 2026-01-01</p>
+        </footer>
+    </div>
+</body>
+</html>
