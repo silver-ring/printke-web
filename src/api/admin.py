@@ -9,14 +9,19 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
+from sqlalchemy.orm import selectinload
 
 from src.database import get_db
-from src.models import Order, OrderItem, User, Payment, PrintJob, ContactMessage
+from src.models import Order, OrderItem, User, Payment, PrintJob, ContactMessage, Driver, Delivery, LocationHistory
 from src.schemas.admin import (
     AdminLogin, AdminResponse, TokenResponse, OrderStatusUpdate,
     DashboardResponse, OrderStats, RevenueStats, RecentOrder,
     OrderListResponse, OrderSummary, PaginationInfo,
     MessageListResponse, MessageResponse, PrintQueueResponse, PrintQueueItem
+)
+from src.schemas.delivery import (
+    DriverCreate, DriverUpdate, DriverResponse, DriverListResponse,
+    DeliveryCreate, DeliveryAssign, ActiveDeliveryResponse, ActiveDeliveriesResponse
 )
 from src.core.security import (
     authenticate_user, create_access_token, get_current_admin,
@@ -125,7 +130,10 @@ async def dashboard(
 
     # Recent orders
     recent_result = await db.execute(
-        select(Order).order_by(Order.created_at.desc()).limit(10)
+        select(Order)
+        .options(selectinload(Order.customer))
+        .order_by(Order.created_at.desc())
+        .limit(10)
     )
     recent_orders = recent_result.scalars().all()
 
@@ -189,6 +197,7 @@ async def list_orders(
     total = (await db.execute(count_query)).scalar() or 0
 
     # Paginate
+    query = query.options(selectinload(Order.items), selectinload(Order.customer))
     query = query.order_by(Order.created_at.desc())
     query = query.offset((page - 1) * per_page).limit(per_page)
 
@@ -227,7 +236,15 @@ async def get_order_detail(
     current_user: User = Depends(get_current_admin)
 ):
     """Get detailed order information"""
-    result = await db.execute(select(Order).where(Order.order_number == order_number))
+    result = await db.execute(
+        select(Order)
+        .where(Order.order_number == order_number)
+        .options(
+            selectinload(Order.items),
+            selectinload(Order.payments),
+            selectinload(Order.customer)
+        )
+    )
     order = result.scalar_one_or_none()
 
     if not order:
@@ -294,7 +311,9 @@ async def update_order_status(
     current_user: User = Depends(get_current_admin)
 ):
     """Update order status"""
-    result = await db.execute(select(Order).where(Order.order_number == order_number))
+    result = await db.execute(
+        select(Order).where(Order.order_number == order_number)
+    )
     order = result.scalar_one_or_none()
 
     if not order:
@@ -337,7 +356,11 @@ async def print_order(
     current_user: User = Depends(get_current_admin)
 ):
     """Send order to printer"""
-    result = await db.execute(select(Order).where(Order.order_number == order_number))
+    result = await db.execute(
+        select(Order)
+        .where(Order.order_number == order_number)
+        .options(selectinload(Order.items))
+    )
     order = result.scalar_one_or_none()
 
     if not order:
@@ -381,9 +404,11 @@ async def get_print_queue(
     current_user: User = Depends(get_current_admin)
 ):
     """Get print queue status"""
+    from src.models import OrderItem
     result = await db.execute(
         select(PrintJob)
         .where(PrintJob.status.in_(["queued", "printing"]))
+        .options(selectinload(PrintJob.order_item).selectinload(OrderItem.order))
         .order_by(PrintJob.created_at)
     )
     jobs = result.scalars().all()
@@ -459,3 +484,281 @@ async def mark_message_read(
     await db.commit()
 
     return {"success": True}
+
+
+# ===== DELIVERY & DRIVER MANAGEMENT =====
+
+@router.get("/drivers", response_model=DriverListResponse)
+async def list_drivers(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    """List all drivers"""
+    result = await db.execute(
+        select(Driver).order_by(Driver.created_at.desc())
+    )
+    drivers = result.scalars().all()
+
+    return DriverListResponse(
+        drivers=[DriverResponse.model_validate(d) for d in drivers],
+        total=len(drivers)
+    )
+
+
+@router.post("/drivers", response_model=DriverResponse)
+async def create_driver(
+    driver_data: DriverCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    """Create a new driver"""
+    # Check if phone already exists
+    result = await db.execute(select(Driver).where(Driver.phone == driver_data.phone))
+    if result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Driver with this phone number already exists"
+        )
+
+    # Create driver
+    driver = Driver(
+        name=driver_data.name,
+        phone=driver_data.phone,
+        password_hash=get_password_hash(driver_data.password),
+        vehicle_type=driver_data.vehicle_type,
+        vehicle_plate=driver_data.vehicle_plate,
+        user_id=driver_data.user_id,
+        is_active=True
+    )
+
+    db.add(driver)
+    await db.commit()
+    await db.refresh(driver)
+
+    logger.info(f"Driver created: {driver.name} by {current_user.email}")
+
+    return DriverResponse.model_validate(driver)
+
+
+@router.get("/drivers/{driver_id}", response_model=DriverResponse)
+async def get_driver(
+    driver_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    """Get driver details"""
+    result = await db.execute(select(Driver).where(Driver.id == driver_id))
+    driver = result.scalar_one_or_none()
+
+    if not driver:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Driver not found")
+
+    return DriverResponse.model_validate(driver)
+
+
+@router.put("/drivers/{driver_id}", response_model=DriverResponse)
+async def update_driver(
+    driver_id: int,
+    driver_data: DriverUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    """Update driver information"""
+    result = await db.execute(select(Driver).where(Driver.id == driver_id))
+    driver = result.scalar_one_or_none()
+
+    if not driver:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Driver not found")
+
+    # Update fields if provided
+    if driver_data.name is not None:
+        driver.name = driver_data.name
+    if driver_data.phone is not None:
+        # Check if phone is already used by another driver
+        result = await db.execute(
+            select(Driver).where(Driver.phone == driver_data.phone, Driver.id != driver_id)
+        )
+        if result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Phone number already in use"
+            )
+        driver.phone = driver_data.phone
+    if driver_data.password is not None:
+        driver.password_hash = get_password_hash(driver_data.password)
+    if driver_data.vehicle_type is not None:
+        driver.vehicle_type = driver_data.vehicle_type
+    if driver_data.vehicle_plate is not None:
+        driver.vehicle_plate = driver_data.vehicle_plate
+    if driver_data.is_active is not None:
+        driver.is_active = driver_data.is_active
+
+    await db.commit()
+    await db.refresh(driver)
+
+    logger.info(f"Driver updated: {driver.name} by {current_user.email}")
+
+    return DriverResponse.model_validate(driver)
+
+
+@router.delete("/drivers/{driver_id}")
+async def delete_driver(
+    driver_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    """Delete a driver"""
+    result = await db.execute(select(Driver).where(Driver.id == driver_id))
+    driver = result.scalar_one_or_none()
+
+    if not driver:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Driver not found")
+
+    # Check if driver has active deliveries
+    result = await db.execute(
+        select(func.count(Delivery.id)).where(
+            Delivery.driver_id == driver_id,
+            Delivery.status.in_(["assigned", "in_transit"])
+        )
+    )
+    active_deliveries = result.scalar() or 0
+
+    if active_deliveries > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot delete driver with {active_deliveries} active deliveries"
+        )
+
+    await db.delete(driver)
+    await db.commit()
+
+    logger.info(f"Driver deleted: {driver.name} by {current_user.email}")
+
+    return {"success": True, "message": "Driver deleted"}
+
+
+@router.post("/orders/{order_number}/assign")
+async def assign_order_to_driver(
+    order_number: str,
+    assignment: DeliveryAssign,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    """Assign an order to a driver for delivery"""
+    # Get order
+    result = await db.execute(
+        select(Order).where(Order.order_number == order_number)
+    )
+    order = result.scalar_one_or_none()
+
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+
+    # Check order status
+    if order.status not in ["paid", "processing", "printed", "shipped"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot assign delivery for order in status: {order.status}"
+        )
+
+    # Get driver
+    result = await db.execute(select(Driver).where(Driver.id == assignment.driver_id))
+    driver = result.scalar_one_or_none()
+
+    if not driver:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Driver not found")
+
+    if not driver.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Driver is not active"
+        )
+
+    # Check if delivery already exists
+    result = await db.execute(
+        select(Delivery).where(Delivery.order_id == order.id)
+    )
+    existing_delivery = result.scalar_one_or_none()
+
+    if existing_delivery:
+        # Update existing delivery
+        existing_delivery.driver_id = driver.id
+        existing_delivery.status = "assigned"
+        existing_delivery.assigned_at = datetime.utcnow()
+        delivery = existing_delivery
+    else:
+        # Create new delivery
+        delivery = Delivery(
+            order_id=order.id,
+            driver_id=driver.id,
+            status="assigned",
+            delivery_address=order.delivery_address,
+            assigned_at=datetime.utcnow()
+        )
+        db.add(delivery)
+
+    # Update order status
+    if order.status != "shipped":
+        order.status = "shipped"
+        order.shipped_at = datetime.utcnow()
+
+    await db.commit()
+    await db.refresh(delivery)
+
+    logger.info(f"Order {order_number} assigned to driver {driver.name} by {current_user.email}")
+
+    return {
+        "success": True,
+        "delivery_id": delivery.id,
+        "order_number": order.order_number,
+        "driver_name": driver.name,
+        "status": delivery.status
+    }
+
+
+@router.get("/deliveries/active", response_model=ActiveDeliveriesResponse)
+async def get_active_deliveries(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    """Get all active deliveries with real-time locations"""
+    result = await db.execute(
+        select(Delivery)
+        .where(Delivery.status.in_(["assigned", "in_transit"]))
+        .options(
+            selectinload(Delivery.order),
+            selectinload(Delivery.driver)
+        )
+        .order_by(Delivery.assigned_at.desc())
+    )
+    deliveries = result.scalars().all()
+
+    active_deliveries = []
+    for d in deliveries:
+        order = d.order
+        driver = d.driver
+
+        active_deliveries.append(ActiveDeliveryResponse(
+            id=d.id,
+            order_number=order.order_number,
+            customer_name=order.guest_name or "Guest",
+            customer_phone=order.guest_phone or "",
+            delivery_address=order.delivery_address or "",
+            delivery_city=order.delivery_city,
+            driver_name=driver.name if driver else None,
+            driver_phone=driver.phone if driver else None,
+            driver_vehicle=f"{driver.vehicle_type} - {driver.vehicle_plate}" if driver and driver.vehicle_type else None,
+            current_lat=driver.current_lat if driver else None,
+            current_lng=driver.current_lng if driver else None,
+            delivery_lat=d.delivery_lat,
+            delivery_lng=d.delivery_lng,
+            status=d.status,
+            assigned_at=d.assigned_at,
+            started_at=d.started_at,
+            last_location_update=driver.last_location_update if driver else None
+        ))
+
+    return ActiveDeliveriesResponse(
+        deliveries=active_deliveries,
+        total=len(active_deliveries)
+    )

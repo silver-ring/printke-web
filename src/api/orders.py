@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, s
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from src.database import get_db
 from src.models import Order, OrderItem
@@ -201,7 +202,11 @@ async def get_order(order_number: str, db: AsyncSession = Depends(get_db)):
             )]
         )
 
-    result = await db.execute(select(Order).where(Order.order_number == order_number))
+    result = await db.execute(
+        select(Order)
+        .where(Order.order_number == order_number)
+        .options(selectinload(Order.items))
+    )
     order = result.scalar_one_or_none()
 
     if not order:
@@ -244,7 +249,11 @@ async def get_order(order_number: str, db: AsyncSession = Depends(get_db)):
 @router.get("/{order_number}/preview")
 async def preview_order(order_number: str, db: AsyncSession = Depends(get_db)):
     """Get PDF preview for order"""
-    result = await db.execute(select(Order).where(Order.order_number == order_number))
+    result = await db.execute(
+        select(Order)
+        .where(Order.order_number == order_number)
+        .options(selectinload(Order.items))
+    )
     order = result.scalar_one_or_none()
 
     if not order:
@@ -263,7 +272,11 @@ async def preview_order(order_number: str, db: AsyncSession = Depends(get_db)):
 @router.get("/{order_number}/download")
 async def download_order(order_number: str, db: AsyncSession = Depends(get_db)):
     """Download PDF for order"""
-    result = await db.execute(select(Order).where(Order.order_number == order_number))
+    result = await db.execute(
+        select(Order)
+        .where(Order.order_number == order_number)
+        .options(selectinload(Order.items))
+    )
     order = result.scalar_one_or_none()
 
     if not order:

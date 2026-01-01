@@ -2,10 +2,9 @@
 M-Pesa Integration Service
 Safaricom Daraja API integration for STK Push payments
 """
-import os
 import base64
-import requests
-from datetime import datetime
+import httpx
+from datetime import datetime, timedelta
 import logging
 
 logger = logging.getLogger(__name__)
@@ -50,14 +49,14 @@ class MpesaService:
         }
 
         try:
-            response = requests.get(url, headers=headers)
-            response.raise_for_status()
-            data = response.json()
-            self.access_token = data['access_token']
-            # Token expires in 3600 seconds, we refresh at 3000
-            from datetime import timedelta
-            self.token_expiry = datetime.now() + timedelta(seconds=3000)
-            return self.access_token
+            with httpx.Client() as client:
+                response = client.get(url, headers=headers)
+                response.raise_for_status()
+                data = response.json()
+                self.access_token = data['access_token']
+                # Token expires in 3600 seconds, we refresh at 3000
+                self.token_expiry = datetime.now() + timedelta(seconds=3000)
+                return self.access_token
         except Exception as e:
             logger.error(f"[MPESA] Failed to get access token: {e}")
             raise
@@ -109,23 +108,24 @@ class MpesaService:
 
         try:
             logger.info(f"[MPESA] Initiating STK Push: {phone}, KES {amount}")
-            response = requests.post(url, json=payload, headers=headers)
-            data = response.json()
+            with httpx.Client() as client:
+                response = client.post(url, json=payload, headers=headers)
+                data = response.json()
 
-            if response.status_code == 200 and data.get('ResponseCode') == '0':
-                logger.info(f"[MPESA] STK Push initiated: {data.get('CheckoutRequestID')}")
-                return {
-                    'success': True,
-                    'checkout_request_id': data.get('CheckoutRequestID'),
-                    'merchant_request_id': data.get('MerchantRequestID'),
-                    'response_description': data.get('ResponseDescription')
-                }
-            else:
-                logger.error(f"[MPESA] STK Push failed: {data}")
-                return {
-                    'success': False,
-                    'error': data.get('errorMessage', data.get('ResponseDescription', 'Unknown error'))
-                }
+                if response.status_code == 200 and data.get('ResponseCode') == '0':
+                    logger.info(f"[MPESA] STK Push initiated: {data.get('CheckoutRequestID')}")
+                    return {
+                        'success': True,
+                        'checkout_request_id': data.get('CheckoutRequestID'),
+                        'merchant_request_id': data.get('MerchantRequestID'),
+                        'response_description': data.get('ResponseDescription')
+                    }
+                else:
+                    logger.error(f"[MPESA] STK Push failed: {data}")
+                    return {
+                        'success': False,
+                        'error': data.get('errorMessage', data.get('ResponseDescription', 'Unknown error'))
+                    }
 
         except Exception as e:
             logger.error(f"[MPESA] Error: {e}")
@@ -162,35 +162,36 @@ class MpesaService:
         }
 
         try:
-            response = requests.post(url, json=payload, headers=headers)
-            data = response.json()
+            with httpx.Client() as client:
+                response = client.post(url, json=payload, headers=headers)
+                data = response.json()
 
-            result_code = data.get('ResultCode')
+                result_code = data.get('ResultCode')
 
-            if result_code == '0':
-                return {
-                    'success': True,
-                    'paid': True,
-                    'message': 'Payment successful'
-                }
-            elif result_code == '1032':
-                return {
-                    'success': True,
-                    'paid': False,
-                    'message': 'Transaction cancelled by user'
-                }
-            elif result_code == '1037':
-                return {
-                    'success': True,
-                    'paid': False,
-                    'message': 'Transaction timed out'
-                }
-            else:
-                return {
-                    'success': True,
-                    'paid': False,
-                    'message': data.get('ResultDesc', 'Transaction failed')
-                }
+                if result_code == '0':
+                    return {
+                        'success': True,
+                        'paid': True,
+                        'message': 'Payment successful'
+                    }
+                elif result_code == '1032':
+                    return {
+                        'success': True,
+                        'paid': False,
+                        'message': 'Transaction cancelled by user'
+                    }
+                elif result_code == '1037':
+                    return {
+                        'success': True,
+                        'paid': False,
+                        'message': 'Transaction timed out'
+                    }
+                else:
+                    return {
+                        'success': True,
+                        'paid': False,
+                        'message': data.get('ResultDesc', 'Transaction failed')
+                    }
 
         except Exception as e:
             logger.error(f"[MPESA] Query error: {e}")

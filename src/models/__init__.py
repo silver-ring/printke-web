@@ -222,3 +222,79 @@ class ContactMessage(Base):
     is_read: Mapped[bool] = mapped_column(Boolean, default=False)
     replied_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class Driver(Base):
+    """Delivery drivers"""
+    __tablename__ = "drivers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"))
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    phone: Mapped[str] = mapped_column(String(20), unique=True, nullable=False, index=True)
+    password_hash: Mapped[Optional[str]] = mapped_column(String(256))
+    vehicle_type: Mapped[Optional[str]] = mapped_column(String(50))
+    vehicle_plate: Mapped[Optional[str]] = mapped_column(String(20))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    current_lat: Mapped[Optional[float]] = mapped_column(Float)
+    current_lng: Mapped[Optional[float]] = mapped_column(Float)
+    last_location_update: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    user: Mapped[Optional["User"]] = relationship()
+    deliveries: Mapped[List["Delivery"]] = relationship(back_populates="driver")
+
+
+class Delivery(Base):
+    """Delivery tracking for orders"""
+    __tablename__ = "deliveries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    order_id: Mapped[int] = mapped_column(Integer, ForeignKey("orders.id"), nullable=False, unique=True)
+    driver_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("drivers.id"))
+
+    # Delivery status: assigned, in_transit, delivered, failed
+    status: Mapped[str] = mapped_column(String(50), default="assigned", index=True)
+
+    # Pickup location (warehouse/office)
+    pickup_lat: Mapped[Optional[float]] = mapped_column(Float)
+    pickup_lng: Mapped[Optional[float]] = mapped_column(Float)
+    pickup_address: Mapped[Optional[str]] = mapped_column(String(255))
+
+    # Delivery location (customer)
+    delivery_lat: Mapped[Optional[float]] = mapped_column(Float)
+    delivery_lng: Mapped[Optional[float]] = mapped_column(Float)
+    delivery_address: Mapped[Optional[str]] = mapped_column(String(255))
+
+    # Timestamps
+    assigned_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    delivered_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+    # Additional info
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    delivery_proof_photo: Mapped[Optional[str]] = mapped_column(String(255))
+    signature: Mapped[Optional[str]] = mapped_column(String(255))
+
+    # Relationships
+    order: Mapped["Order"] = relationship()
+    driver: Mapped[Optional["Driver"]] = relationship(back_populates="deliveries")
+    location_history: Mapped[List["LocationHistory"]] = relationship(back_populates="delivery", cascade="all, delete-orphan")
+
+
+class LocationHistory(Base):
+    """GPS tracking history for deliveries"""
+    __tablename__ = "location_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    delivery_id: Mapped[int] = mapped_column(Integer, ForeignKey("deliveries.id"), nullable=False, index=True)
+    lat: Mapped[float] = mapped_column(Float, nullable=False)
+    lng: Mapped[float] = mapped_column(Float, nullable=False)
+    accuracy: Mapped[Optional[float]] = mapped_column(Float)
+    speed: Mapped[Optional[float]] = mapped_column(Float)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+    # Relationship
+    delivery: Mapped["Delivery"] = relationship(back_populates="location_history")

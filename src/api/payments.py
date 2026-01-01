@@ -7,6 +7,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from src.database import get_db
 from src.models import Order, Payment, PrintJob
@@ -95,7 +96,11 @@ async def initiate_mpesa(request: PaymentInitiate, db: AsyncSession = Depends(ge
     - **phone**: Kenyan phone number (0712345678 format)
     """
     # Find order
-    result = await db.execute(select(Order).where(Order.order_number == request.order_number))
+    result = await db.execute(
+        select(Order)
+        .where(Order.order_number == request.order_number)
+        .options(selectinload(Order.items))
+    )
     order = result.scalar_one_or_none()
 
     if not order:
@@ -217,7 +222,9 @@ async def mpesa_callback(callback: MpesaCallback, db: AsyncSession = Depends(get
 
         # Find and update payment
         result = await db.execute(
-            select(Payment).where(Payment.checkout_request_id == checkout_request_id)
+            select(Payment)
+            .where(Payment.checkout_request_id == checkout_request_id)
+            .options(selectinload(Payment.order).selectinload(Order.items))
         )
         payment = result.scalar_one_or_none()
 
@@ -261,7 +268,9 @@ async def mpesa_callback(callback: MpesaCallback, db: AsyncSession = Depends(get
 async def check_payment_status(checkout_request_id: str, db: AsyncSession = Depends(get_db)):
     """Check status of M-Pesa payment"""
     result = await db.execute(
-        select(Payment).where(Payment.checkout_request_id == checkout_request_id)
+        select(Payment)
+        .where(Payment.checkout_request_id == checkout_request_id)
+        .options(selectinload(Payment.order))
     )
     payment = result.scalar_one_or_none()
 

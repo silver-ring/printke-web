@@ -29,16 +29,16 @@
                             <input type="file" id="frontInput" name="front" accept="image/*" hidden required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Back of Card *</label>
+                            <label class="form-label">Back of Card (Optional)</label>
                             <div class="upload-box" id="backUpload" onclick="document.getElementById('backInput').click()">
                                 <div class="upload-icon">📷</div>
                                 <div class="upload-text">
                                     <strong>Click to upload</strong> or drag and drop<br>
-                                    <small>PNG, JPG up to 10MB</small>
+                                    <small>PNG, JPG up to 10MB (leave empty for single-sided)</small>
                                 </div>
                                 <img class="upload-preview" id="backPreview">
                             </div>
-                            <input type="file" id="backInput" name="back" accept="image/*" hidden required>
+                            <input type="file" id="backInput" name="back" accept="image/*" hidden>
                         </div>
                     </div>
 
@@ -92,7 +92,7 @@
 
                         <div class="form-group">
                             <label class="form-label">Delivery Address *</label>
-                            <textarea class="form-input" id="deliveryAddress" name="delivery_address" rows="3" placeholder="Building name, street, landmarks..."></textarea>
+                            <textarea class="form-input" id="deliveryAddress" name="delivery_address" rows="3" placeholder="Building name, street, landmarks..." required minlength="10"></textarea>
                         </div>
                     </div>
 
@@ -256,10 +256,16 @@
 
         // Validate files
         const frontFile = document.getElementById('frontInput').files[0];
-        const backFile = document.getElementById('backInput').files[0];
 
-        if (!frontFile || !backFile) {
-            alert('Please upload both front and back card images');
+        if (!frontFile) {
+            alert('Please upload front card image');
+            return;
+        }
+
+        // Validate delivery address (min 10 chars)
+        const address = document.getElementById('deliveryAddress').value;
+        if (address.length < 10) {
+            alert('Please enter a complete delivery address (at least 10 characters)');
             return;
         }
 
@@ -277,7 +283,7 @@
 
             const data = await response.json();
 
-            if (data.success) {
+            if (response.ok && data.success) {
                 currentOrder = data;
                 document.getElementById('orderNumber').textContent = data.order_number;
                 document.getElementById('paymentLink').href = '/payment/' + data.order_number;
@@ -290,7 +296,18 @@
                     window.location.href = '/payment/' + data.order_number;
                 }, 2000);
             } else {
-                throw new Error(data.error || 'Order creation failed');
+                // Show detailed error
+                let errorMsg = 'Order creation failed';
+                if (data.detail) {
+                    if (Array.isArray(data.detail)) {
+                        errorMsg = data.detail.map(e => `${e.loc[1]}: ${e.msg}`).join('\n');
+                    } else {
+                        errorMsg = data.detail;
+                    }
+                } else if (data.error) {
+                    errorMsg = data.error;
+                }
+                throw new Error(errorMsg);
             }
         } catch (error) {
             alert('Error: ' + error.message);
